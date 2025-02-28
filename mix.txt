@@ -1,0 +1,5815 @@
+Microsoft Windows [versão 10.0.22631.4890]
+(c) Microsoft Corporation. Todos os direitos reservados.
+
+C:\Users\olive> hostname  -I
+sethostname: usa o miniaplicativo 'Rede' no 'Painel de controle' para definir
+o nome do host.
+Não há suporte para hostname -s.
+
+C:\Users\olive> cd downloads
+
+C:\Users\olive\Downloads> cd netcat-master
+
+C:\Users\olive\Downloads\netcat-master> nc -l -p 1234
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.02
+  y_point: 0.39
+  dop_index: 0
+  cluster_index: 1
+  move_speed: 0.00 cm/s
+total_phase: 0.48       breath_phase: -1.77     heart_phase: 0.18
+breath_rate: 17.00
+heart_rate: 88.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.02
+  y_point: 0.44
+  dop_index: 0
+  cluster_index: 1
+  move_speed: 0.00 cm/s
+total_phase: -1.60      breath_phase: -1.57     heart_phase: -0.84
+breath_rate: 18.00
+heart_rate: 86.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.16
+  y_point: 0.42
+  dop_index: 0
+  cluster_index: 1
+  move_speed: 0.00 cm/s
+total_phase: -0.75      breath_phase: -1.06     heart_phase: -0.14
+breath_rate: 18.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.17
+  y_point: 0.45
+  dop_index: 0
+  cluster_index: 1
+  move_speed: 0.00 cm/s
+total_phase: -1.94      breath_phase: -0.27     heart_phase: 0.31
+breath_rate: 18.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.11
+  y_point: 0.36
+  dop_index: 0
+  cluster_index: 1
+  move_speed: 0.00 cm/s
+total_phase: 2.14       breath_phase: 0.49      heart_phase: 0.37
+breath_rate: 19.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.00
+  y_point: 0.27
+  dop_index: -1
+  cluster_index: 1
+  move_speed: -17.28 cm/s
+total_phase: 0.92       breath_phase: 1.22      heart_phase: 0.04
+breath_rate: 19.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.04
+  y_point: 0.34
+  dop_index: 1
+  cluster_index: 1
+  move_speed: 17.28 cm/s
+total_phase: 0.60       breath_phase: 1.69      heart_phase: -0.57
+breath_rate: 19.00
+heart_rate: 83.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.10
+  y_point: 0.40
+  dop_index: -1
+  cluster_index: 1
+  move_speed: -17.28 cm/s
+total_phase: -1.11      breath_phase: 1.91      heart_phase: 0.24
+breath_rate: 20.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.09
+  y_point: 0.36
+  dop_index: 0
+  cluster_index: 1
+  move_speed: 0.00 cm/s
+total_phase: -1.13      breath_phase: 1.47      heart_phase: -0.27
+breath_rate: 20.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.16
+  y_point: 0.39
+  dop_index: 0
+  cluster_index: 1
+  move_speed: 0.00 cm/s
+total_phase: 0.23       breath_phase: 0.34      heart_phase: 1.02
+breath_rate: 20.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.10
+  y_point: 0.35
+  dop_index: -1
+  cluster_index: 1
+  move_speed: -17.28 cm/s
+total_phase: 2.83       breath_phase: -1.06     heart_phase: -0.98
+breath_rate: 20.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.16
+  y_point: 0.22
+  dop_index: -1
+  cluster_index: 1
+  move_speed: -17.28 cm/s
+total_phase: 2.03       breath_phase: -2.02     heart_phase: 0.29
+breath_rate: 20.00
+heart_rate: 80.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.08
+  y_point: 0.28
+  dop_index: -2
+  cluster_index: 1
+  move_speed: -34.56 cm/s
+total_phase: 1.40       breath_phase: -1.93     heart_phase: -0.62
+breath_rate: 21.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.03
+  y_point: 0.20
+  dop_index: 0
+  cluster_index: 1
+  move_speed: 0.00 cm/s
+total_phase: -0.27      breath_phase: -1.11     heart_phase: 0.55
+breath_rate: 21.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.16
+  y_point: 0.21
+  dop_index: 0
+  cluster_index: 1
+  move_speed: 0.00 cm/s
+total_phase: -2.34      breath_phase: -0.41     heart_phase: 0.71
+breath_rate: 21.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.10
+  y_point: 0.26
+  dop_index: 0
+  cluster_index: 1
+  move_speed: 0.00 cm/s
+total_phase: -1.62      breath_phase: -0.31     heart_phase: -0.22
+breath_rate: 21.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.14
+  y_point: 0.27
+  dop_index: 1
+  cluster_index: 1
+  move_speed: 17.28 cm/s
+total_phase: 1.51       breath_phase: -0.67     heart_phase: -0.90
+breath_rate: 21.00
+heart_rate: 78.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.14
+  y_point: 0.27
+  dop_index: 1
+  cluster_index: 1
+  move_speed: 17.28 cm/s
+total_phase: -1.16      breath_phase: -0.84     heart_phase: 0.20
+breath_rate: 22.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.14
+  y_point: 0.27
+  dop_index: 1
+  cluster_index: 1
+  move_speed: 17.28 cm/s
+total_phase: -1.01      breath_phase: -0.39     heart_phase: 0.39
+breath_rate: 22.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.14
+  y_point: 0.27
+  dop_index: 1
+  cluster_index: 1
+  move_speed: 17.28 cm/s
+total_phase: -1.20      breath_phase: 0.21      heart_phase: 0.66
+breath_rate: 22.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.14
+  y_point: 0.27
+  dop_index: 1
+  cluster_index: 1
+  move_speed: 17.28 cm/s
+total_phase: -1.77      breath_phase: 0.56      heart_phase: -0.43
+breath_rate: 22.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.14
+  y_point: 0.27
+  dop_index: 1
+  cluster_index: 1
+  move_speed: 17.28 cm/s
+total_phase: 0.46       breath_phase: 0.51      heart_phase: -0.31
+breath_rate: 22.00
+heart_rate: 76.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.14
+  y_point: 0.27
+  dop_index: 1
+  cluster_index: 1
+  move_speed: 17.28 cm/s
+total_phase: -0.55      breath_phase: 0.38      heart_phase: -0.34
+breath_rate: 22.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.14
+  y_point: 0.27
+  dop_index: 1
+  cluster_index: 1
+  move_speed: 17.28 cm/s
+total_phase: -0.72      breath_phase: 0.35      heart_phase: 0.14
+breath_rate: 23.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.14
+  y_point: 0.27
+  dop_index: 1
+  cluster_index: 1
+  move_speed: 17.28 cm/s
+total_phase: -0.80      breath_phase: 0.56      heart_phase: 0.65
+breath_rate: 23.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.14
+  y_point: 0.27
+  dop_index: 1
+  cluster_index: 1
+  move_speed: 17.28 cm/s
+total_phase: 1.73       breath_phase: 1.15      heart_phase: -0.00
+breath_rate: 23.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.14
+  y_point: 0.27
+  dop_index: 1
+  cluster_index: 1
+  move_speed: 17.28 cm/s
+total_phase: 0.50       breath_phase: 2.51      heart_phase: -0.35
+breath_rate: 23.00
+heart_rate: 74.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.14
+  y_point: 0.27
+  dop_index: 1
+  cluster_index: 1
+  move_speed: 17.28 cm/s
+total_phase: 0.45       breath_phase: 4.32      heart_phase: -0.92
+breath_rate: 23.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.14
+  y_point: 0.27
+  dop_index: 1
+  cluster_index: 1
+  move_speed: 17.28 cm/s
+total_phase: -1.08      breath_phase: 5.72      heart_phase: 1.42
+breath_rate: 23.00
+distance: 68.88
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+
+
+C:\Users\olive\Downloads\netcat-master> nc -l -p 1234
+  y_point: 0.19
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -0.64     heart_phase: 0.02
+breath_rate: 18.00
+heart_rate: 0.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 0.42
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -0.97     heart_phase: -0.32
+breath_rate: 18.00
+distance: 34.44
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.09
+  y_point: 0.31
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.61      breath_phase: -1.40     heart_phase: -0.17
+breath_rate: 18.00
+distance: 34.44
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.07
+  y_point: 0.34
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -1.75     heart_phase: 0.49
+breath_rate: 18.00
+heart_rate: 67.00
+distance: 34.44
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 0.37
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 1.13       breath_phase: -1.85     heart_phase: 0.04
+breath_rate: 18.00
+distance: 34.44
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.01
+  y_point: 0.34
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -1.36     heart_phase: -0.07
+breath_rate: 18.00
+distance: 28.70
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.04
+  y_point: 0.39
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: -0.14     heart_phase: -0.73
+breath_rate: 18.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.12
+  y_point: 0.48
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: 1.49      heart_phase: 0.70
+breath_rate: 18.00
+distance: 45.92
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 0.48
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: 3.14      heart_phase: -0.00
+breath_rate: 18.00
+heart_rate: 68.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.11
+  y_point: 0.37
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.75       breath_phase: 4.41      heart_phase: 0.23
+breath_rate: 18.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.13
+  y_point: 0.49
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -0.88      breath_phase: 5.41      heart_phase: -0.53
+breath_rate: 18.00
+distance: 45.92
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.17
+  y_point: 0.43
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 2.61       breath_phase: 5.93      heart_phase: -0.28
+breath_rate: 17.00
+distance: 45.92
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.12
+  y_point: 0.49
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -1.08      breath_phase: 6.11      heart_phase: 0.90
+breath_rate: 17.00
+distance: 45.92
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.20
+  y_point: 0.44
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -0.57      breath_phase: 5.75      heart_phase: -0.75
+breath_rate: 17.00
+heart_rate: 69.00
+distance: 45.92
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.20
+  y_point: 0.44
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: 4.76      heart_phase: 0.73
+breath_rate: 17.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.11
+  y_point: 0.29
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+total_phase: 2.18       breath_phase: 3.22      heart_phase: -0.36
+breath_rate: 17.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.23
+  y_point: 0.22
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 1.01       breath_phase: 1.83      heart_phase: -0.18
+breath_rate: 16.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.21
+  y_point: 0.21
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -1.88      breath_phase: 0.77      heart_phase: -0.65
+breath_rate: 16.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.24
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -1.30      breath_phase: -0.32     heart_phase: 1.17
+breath_rate: 16.00
+heart_rate: 69.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.11
+  y_point: 0.55
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: 0.60       breath_phase: -1.55     heart_phase: 0.43
+breath_rate: 16.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 0.77
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 2.99       breath_phase: -2.08     heart_phase: -0.86
+breath_rate: 16.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.07
+  y_point: 0.50
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.63      breath_phase: -0.21     heart_phase: 0.06
+breath_rate: 15.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.16
+  y_point: 0.46
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -2.37      breath_phase: 1.81      heart_phase: 1.22
+breath_rate: 15.00
+distance: 45.92
+
+
+
+C:\Users\olive\Downloads\netcat-master> nc -l -p 1234
+breath_rate: 15.00
+heart_rate: 90.00
+distance: 97.58
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 0.58
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: 5.08      heart_phase: -0.66
+breath_rate: 17.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.13
+  y_point: 0.63
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: 0.01       breath_phase: 4.46      heart_phase: -0.03
+breath_rate: 17.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.13
+  y_point: 0.48
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: 2.26       breath_phase: 2.80      heart_phase: 0.01
+breath_rate: 17.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.13
+  y_point: 0.60
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -2.25      breath_phase: 0.93      heart_phase: -0.08
+breath_rate: 17.00
+heart_rate: 84.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.05
+  y_point: 0.58
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: 0.00       breath_phase: -0.90     heart_phase: -0.51
+breath_rate: 17.00
+distance: 57.40
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.76
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: -6.43     heart_phase: -0.16
+breath_rate: 18.00
+heart_rate: 86.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 0.72
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.45      breath_phase: -5.99     heart_phase: -0.10
+breath_rate: 18.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.06
+  y_point: 0.77
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -1.93      breath_phase: -5.74     heart_phase: 0.19
+breath_rate: 18.00
+heart_rate: 88.00
+distance: 74.62
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.12
+  y_point: 0.71
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 2.24       breath_phase: -5.83     heart_phase: 0.01
+breath_rate: 18.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.06
+  y_point: 0.63
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -2.79      breath_phase: -5.81     heart_phase: -0.07
+breath_rate: 18.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.06
+  y_point: 0.73
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.33       breath_phase: -5.74     heart_phase: -0.82
+breath_rate: 18.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 0.71
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+total_phase: 0.00       breath_phase: -5.45     heart_phase: 1.77
+breath_rate: 18.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.05
+  y_point: 0.56
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.55      breath_phase: -4.67     heart_phase: -1.47
+breath_rate: 18.00
+heart_rate: 90.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.06
+  y_point: 0.32
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -2.72      breath_phase: -3.62     heart_phase: 0.37
+breath_rate: 18.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.05
+  y_point: 0.36
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: 0.00       breath_phase: -2.65     heart_phase: 0.17
+breath_rate: 18.00
+distance: 34.44
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.01
+  y_point: 0.30
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -2.64      breath_phase: -2.44     heart_phase: -0.26
+breath_rate: 18.00
+distance: 28.70
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 0.37
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 2.06       breath_phase: -2.57     heart_phase: -0.59
+breath_rate: 18.00
+heart_rate: 92.00
+distance: 34.44
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.04
+  y_point: 0.41
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -2.47     heart_phase: 1.09
+breath_rate: 18.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.05
+  y_point: 0.41
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -1.27      breath_phase: -1.63     heart_phase: -1.13
+breath_rate: 18.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.08
+  y_point: 0.47
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -2.18      breath_phase: -0.06     heart_phase: 0.60
+breath_rate: 18.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.09
+  y_point: 0.42
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 2.07       breath_phase: 1.53      heart_phase: 0.15
+breath_rate: 18.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.03
+  y_point: 0.42
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 2.06       breath_phase: 3.10      heart_phase: 0.85
+breath_rate: 18.00
+heart_rate: 93.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 0.45
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -1.63      breath_phase: 5.14      heart_phase: -2.08
+breath_rate: 18.00
+distance: 40.18
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.02
+  y_point: 0.59
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: 7.16      heart_phase: 0.24
+breath_rate: 18.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.09
+  y_point: 0.73
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -2.24      breath_phase: 8.45      heart_phase: 1.81
+breath_rate: 17.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.02
+  y_point: 0.60
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: 8.45      heart_phase: -0.67
+breath_rate: 18.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.04
+  y_point: 0.68
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: 0.00       breath_phase: 7.28      heart_phase: -0.03
+breath_rate: 18.00
+heart_rate: 95.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.06
+  y_point: 0.89
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: 5.58      heart_phase: -1.07
+breath_rate: 18.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.12
+  y_point: 0.86
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.68       breath_phase: 3.82      heart_phase: 0.35
+breath_rate: 18.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.11
+  y_point: 0.86
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.51       breath_phase: 2.37      heart_phase: 1.11
+breath_rate: 18.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.22
+  y_point: 0.87
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -2.33      breath_phase: 1.76      heart_phase: -0.56
+breath_rate: 18.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.17
+  y_point: 0.90
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -1.44      breath_phase: 1.63      heart_phase: -0.60
+breath_rate: 18.00
+heart_rate: 94.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 0.92
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: 1.75      heart_phase: 1.30
+breath_rate: 18.00
+distance: 91.84
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.01
+  y_point: 0.89
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -2.71      breath_phase: 2.27      heart_phase: -1.49
+breath_rate: 18.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.09
+  y_point: 0.88
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -1.39      breath_phase: 2.48      heart_phase: 0.19
+breath_rate: 18.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.04
+  y_point: 1.09
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: 1.90      heart_phase: 1.39
+breath_rate: 18.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 0.95
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -1.93      breath_phase: 0.62      heart_phase: -0.83
+breath_rate: 18.00
+heart_rate: 95.00
+distance: 91.84
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.24
+  y_point: 0.87
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -0.94     heart_phase: -0.35
+breath_rate: 18.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.05
+  y_point: 0.90
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -2.16     heart_phase: -0.14
+breath_rate: 18.00
+distance: 91.84
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 0.92
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 1.27       breath_phase: -2.89     heart_phase: 0.42
+breath_rate: 18.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.25
+  y_point: 0.84
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -0.16      breath_phase: -2.91     heart_phase: 0.48
+breath_rate: 19.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.24
+  y_point: 0.91
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: 0.00       breath_phase: -2.40     heart_phase: -0.79
+breath_rate: 19.00
+heart_rate: 97.00
+distance: 91.84
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.24
+  y_point: 0.91
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: 0.00       breath_phase: -1.77     heart_phase: 0.51
+breath_rate: 19.00
+distance: 97.58
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.22
+  y_point: 1.02
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: -0.18      breath_phase: -1.15     heart_phase: -0.20
+breath_rate: 19.00
+distance: 97.58
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.21
+  y_point: 1.17
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -0.03      breath_phase: -0.50     heart_phase: -0.28
+breath_rate: 19.00
+distance: 97.58
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 1.26
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.34      breath_phase: -0.00     heart_phase: 0.11
+breath_rate: 19.00
+distance: 97.58
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.17
+  y_point: 1.29
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.00      breath_phase: 0.14      heart_phase: 0.10
+breath_rate: 20.00
+heart_rate: 98.00
+distance: 97.58
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.13
+  y_point: 1.24
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -1.12      breath_phase: -0.03     heart_phase: -0.31
+breath_rate: 20.00
+distance: 97.58
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.13
+  y_point: 1.14
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+total_phase: 0.00       breath_phase: -0.28     heart_phase: -0.36
+breath_rate: 21.00
+distance: 109.06
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.20
+  y_point: 1.02
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -2.46      breath_phase: -0.58     heart_phase: 0.43
+breath_rate: 21.00
+distance: 103.32
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.18
+  y_point: 1.04
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+total_phase: 2.45       breath_phase: -0.78     heart_phase: 0.32
+breath_rate: 22.00
+distance: 103.32
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.25
+  y_point: 1.05
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -0.11     heart_phase: -0.55
+breath_rate: 22.00
+heart_rate: 99.00
+distance: 97.58
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.15
+  y_point: 0.85
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: 1.01      heart_phase: -0.67
+breath_rate: 22.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.24
+  y_point: 0.88
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: 1.99      heart_phase: 1.77
+breath_rate: 22.00
+distance: 91.84
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.22
+  y_point: 0.99
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: 2.52      heart_phase: -0.67
+breath_rate: 22.00
+distance: 97.58
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.20
+  y_point: 1.09
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: 2.76      heart_phase: -0.59
+breath_rate: 21.00
+distance: 109.06
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.15
+  y_point: 1.14
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.35       breath_phase: 2.57      heart_phase: -0.33
+breath_rate: 21.00
+heart_rate: 96.00
+distance: 109.06
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.14
+  y_point: 1.20
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -0.74      breath_phase: 1.92      heart_phase: 1.23
+breath_rate: 20.00
+distance: 114.80
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.12
+  y_point: 1.22
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 1.65       breath_phase: 1.01      heart_phase: -0.46
+breath_rate: 20.00
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.17
+  y_point: 1.32
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: 0.28      heart_phase: 0.01
+breath_rate: 19.00
+distance: 132.02
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.12
+  y_point: 1.38
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -2.34      breath_phase: -0.16     heart_phase: -0.85
+breath_rate: 20.00
+distance: 132.02
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.17
+  y_point: 1.37
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: -0.75     heart_phase: 1.10
+breath_rate: 20.00
+heart_rate: 95.00
+distance: 137.76
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 1.54
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: -1.38     heart_phase: 0.16
+breath_rate: 20.00
+distance: 149.24
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.11
+  y_point: 1.50
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.67       breath_phase: -1.73     heart_phase: -0.89
+breath_rate: 20.00
+distance: 149.24
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.15
+  y_point: 1.57
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 154.98
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.16
+  y_point: 1.70
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 166.46
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.24
+  y_point: 1.65
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 166.46
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.12
+  y_point: 1.83
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 183.68
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.14
+  y_point: 1.94
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 189.42
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.16
+  y_point: 1.94
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 189.42
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 1.95
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 195.16
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.18
+  y_point: 1.95
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 195.16
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.18
+  y_point: 1.95
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 195.16
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.18
+  y_point: 1.95
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.32
+  y_point: 1.72
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 172.20
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.25
+  y_point: 1.76
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 172.20
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.20
+  y_point: 1.77
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 172.20
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.20
+  y_point: 1.76
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 177.94
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.22
+  y_point: 1.78
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 177.94
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.17
+  y_point: 1.75
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 172.20
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 1.79
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 177.94
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.16
+  y_point: 1.83
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 177.94
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.25
+  y_point: 1.79
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 177.94
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.13
+  y_point: 1.86
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 183.68
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.43
+  y_point: 1.78
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 0.91
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 149.24
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.09
+  y_point: 1.20
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+distance: 149.24
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.14
+  y_point: 1.10
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+distance: 149.24
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.15
+  y_point: 1.40
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 143.50
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.05
+  y_point: 1.55
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 149.24
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.17
+  y_point: 1.51
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 149.24
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.09
+  y_point: 1.55
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 149.24
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.11
+  y_point: 1.46
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 143.50
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.17
+  y_point: 1.48
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 149.24
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.14
+  y_point: 1.65
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 154.98
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 2.00
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+distance: 154.98
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.04
+  y_point: 2.17
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 154.98
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.00
+  y_point: 2.19
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 154.98
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 1.88
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 154.98
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 1.71
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 160.72
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.08
+  y_point: 1.58
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 154.98
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 1.90
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 154.98
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.05
+  y_point: 1.66
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 154.98
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.01
+  y_point: 1.44
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 149.24
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.09
+  y_point: 1.65
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 154.98
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.27
+  y_point: 1.55
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 149.24
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 1.47
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 143.50
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.24
+  y_point: 1.39
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 137.76
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 1.47
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 143.50
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.02
+  y_point: 1.48
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 137.76
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.04
+  y_point: 1.34
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 132.02
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.12
+  y_point: 1.35
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 137.76
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.23
+  y_point: 1.39
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 132.02
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.15
+  y_point: 1.27
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 126.28
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.04
+  y_point: 1.24
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 126.28
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.13
+  y_point: 1.27
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.18
+  y_point: 0.99
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.11
+  y_point: 0.94
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.16
+  y_point: 0.85
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.06
+  y_point: 0.88
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.03
+  y_point: 0.95
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.04
+  y_point: 0.79
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.06
+  y_point: 0.83
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 0.49
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.15
+  y_point: 0.57
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.09
+  y_point: 0.70
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.00
+  y_point: 0.73
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.04
+  y_point: 0.61
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.04
+  y_point: 0.63
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.17
+  y_point: 0.59
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.23
+  y_point: 0.49
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.16
+  y_point: 0.57
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.03
+  y_point: 0.61
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.08
+  y_point: 0.59
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.06
+  y_point: 0.58
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.06
+  y_point: 0.57
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 0.60
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 1.46       breath_phase: -1.44     heart_phase: 0.00
+breath_rate: 19.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 0.58
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.08       breath_phase: -0.51     heart_phase: 0.29
+breath_rate: 19.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.00
+  y_point: 0.61
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -1.47      breath_phase: 0.82      heart_phase: 0.36
+breath_rate: 19.00
+heart_rate: 93.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.11
+  y_point: 0.57
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: 1.91      heart_phase: -0.35
+breath_rate: 18.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.08
+  y_point: 0.53
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -1.04      breath_phase: 2.13      heart_phase: 0.37
+breath_rate: 18.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 0.64
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.49      breath_phase: 1.30      heart_phase: -0.44
+breath_rate: 18.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 0.63
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -0.21     heart_phase: -0.00
+breath_rate: 17.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.13
+  y_point: 0.60
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.10      breath_phase: -1.71     heart_phase: -0.04
+breath_rate: 17.00
+heart_rate: 91.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 0.60
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.17       breath_phase: -2.52     heart_phase: 0.13
+breath_rate: 17.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 0.64
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -1.01      breath_phase: -2.45     heart_phase: 0.04
+breath_rate: 16.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.13
+  y_point: 0.66
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: 0.37       breath_phase: -1.97     heart_phase: 0.13
+breath_rate: 16.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.17
+  y_point: 0.74
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: 0.00       breath_phase: -1.50     heart_phase: 0.34
+breath_rate: 16.00
+distance: 74.62
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.05
+  y_point: 0.82
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: 0.00       breath_phase: -1.14     heart_phase: -0.80
+breath_rate: 16.00
+heart_rate: 90.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 0.92
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: -1.96      breath_phase: -0.94     heart_phase: -0.07
+breath_rate: 15.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 0.92
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: 0.37       breath_phase: -1.14     heart_phase: 0.40
+breath_rate: 15.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.13
+  y_point: 0.87
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: -0.21      breath_phase: -1.60     heart_phase: 0.64
+breath_rate: 15.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.35
+  y_point: 0.73
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: 0.10       breath_phase: -2.07     heart_phase: -0.88
+breath_rate: 15.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.38
+  y_point: 0.59
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: -0.21      breath_phase: -2.33     heart_phase: 0.17
+breath_rate: 14.00
+heart_rate: 89.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.46
+  y_point: 0.53
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: 0.08       breath_phase: -2.29     heart_phase: -0.10
+breath_rate: 14.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.38
+  y_point: 0.61
+  dop_index: 4
+  cluster_index: 0
+  move_speed: 69.12 cm/s
+total_phase: -0.11      breath_phase: -1.97     heart_phase: 0.36
+breath_rate: 14.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.38
+  y_point: 0.61
+  dop_index: 4
+  cluster_index: 0
+  move_speed: 69.12 cm/s
+total_phase: 0.18       breath_phase: -1.47     heart_phase: -0.17
+breath_rate: 14.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: -0.24      breath_phase: -0.93     heart_phase: 0.05
+breath_rate: 14.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: 0.20       breath_phase: -0.45     heart_phase: -0.16
+breath_rate: 14.00
+heart_rate: 88.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: -0.32      breath_phase: -0.10     heart_phase: 0.15
+breath_rate: 13.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: -0.63      breath_phase: 0.12      heart_phase: -0.15
+breath_rate: 13.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: 0.43       breath_phase: 0.15      heart_phase: 0.20
+breath_rate: 13.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: -0.09      breath_phase: 0.15      heart_phase: 0.06
+breath_rate: 13.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: 0.12       breath_phase: 0.28      heart_phase: -0.40
+breath_rate: 13.00
+heart_rate: 87.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: -0.26      breath_phase: 0.53      heart_phase: 0.24
+breath_rate: 13.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: 0.10       breath_phase: 0.80      heart_phase: 0.07
+breath_rate: 12.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: 0.19       breath_phase: 1.05      heart_phase: 0.08
+breath_rate: 12.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: -0.09      breath_phase: 1.32      heart_phase: -0.18
+breath_rate: 12.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: -1.33      breath_phase: 1.40      heart_phase: 0.15
+breath_rate: 13.00
+heart_rate: 87.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: 1.35       breath_phase: 1.27      heart_phase: -0.05
+breath_rate: 14.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: -0.15      breath_phase: 1.08      heart_phase: 0.39
+breath_rate: 14.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: -0.42      breath_phase: 1.00      heart_phase: -0.73
+breath_rate: 15.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: 0.18       breath_phase: 1.03      heart_phase: 0.42
+breath_rate: 15.00
+heart_rate: 86.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: 0.01       breath_phase: 1.11      heart_phase: 0.03
+breath_rate: 16.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: -0.20      breath_phase: 1.18      heart_phase: 0.07
+breath_rate: 16.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: 0.14       breath_phase: 1.20      heart_phase: -0.25
+breath_rate: 17.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: 0.50       breath_phase: 1.15      heart_phase: 0.14
+breath_rate: 17.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: 0.04       breath_phase: 1.09      heart_phase: -0.10
+breath_rate: 18.00
+heart_rate: 84.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: -0.19      breath_phase: 0.95      heart_phase: 0.05
+breath_rate: 18.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: 0.31       breath_phase: 0.77      heart_phase: 0.21
+breath_rate: 18.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.83
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+total_phase: 0.19       breath_phase: 0.66      heart_phase: -0.30
+breath_rate: 18.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.04
+  y_point: 0.94
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.34      breath_phase: 0.56      heart_phase: 0.01
+breath_rate: 19.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.04
+  y_point: 0.94
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.45      breath_phase: 0.47      heart_phase: 0.28
+breath_rate: 19.00
+heart_rate: 83.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.04
+  y_point: 0.94
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.21       breath_phase: 0.39      heart_phase: -0.30
+breath_rate: 19.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.04
+  y_point: 0.94
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.34       breath_phase: 0.22      heart_phase: 0.17
+breath_rate: 20.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.02
+  y_point: 1.01
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+total_phase: 0.88       breath_phase: -0.04     heart_phase: 0.03
+breath_rate: 20.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.05
+  y_point: 1.06
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+total_phase: 0.13       breath_phase: -0.28     heart_phase: -0.08
+breath_rate: 20.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 1.07
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+total_phase: 0.26       breath_phase: -0.38     heart_phase: -0.14
+breath_rate: 21.00
+heart_rate: 81.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.05
+  y_point: 0.88
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+total_phase: 0.00       breath_phase: -0.33     heart_phase: 0.16
+breath_rate: 21.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.12
+  y_point: 0.63
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.02       breath_phase: -0.20     heart_phase: 0.05
+breath_rate: 21.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.20
+  y_point: 0.83
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -0.12     heart_phase: 0.02
+breath_rate: 21.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.22
+  y_point: 0.71
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+total_phase: 0.00       breath_phase: -0.11     heart_phase: -0.10
+breath_rate: 22.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.14
+  y_point: 0.68
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+total_phase: 0.00       breath_phase: -0.19     heart_phase: -0.09
+breath_rate: 22.00
+heart_rate: 80.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.09
+  y_point: 0.59
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+total_phase: 0.00       breath_phase: -0.30     heart_phase: 0.19
+breath_rate: 23.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.14
+  y_point: 0.59
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+total_phase: 0.00       breath_phase: -0.29     heart_phase: -0.19
+breath_rate: 23.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.26
+  y_point: 0.63
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+total_phase: 0.00       breath_phase: -0.24     heart_phase: 0.09
+breath_rate: 23.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.42
+  y_point: 0.71
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+total_phase: 0.00       breath_phase: -0.22     heart_phase: 0.20
+breath_rate: 23.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.34
+  y_point: 0.68
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -1.64      breath_phase: -0.27     heart_phase: -0.25
+breath_rate: 24.00
+heart_rate: 79.00
+distance: 74.62
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.03
+  y_point: 0.67
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+total_phase: -0.28      breath_phase: -0.56     heart_phase: -0.04
+breath_rate: 24.00
+distance: 74.62
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.03
+  y_point: 0.76
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.61       breath_phase: -1.04     heart_phase: 0.27
+breath_rate: 24.00
+distance: 74.62
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.03
+  y_point: 0.76
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.81       breath_phase: -1.54     heart_phase: -0.27
+breath_rate: 25.00
+distance: 74.62
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.03
+  y_point: 0.76
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.34       breath_phase: -1.83     heart_phase: 0.06
+breath_rate: 25.00
+distance: 74.62
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.12
+  y_point: 0.80
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.30      breath_phase: -1.82     heart_phase: -0.04
+breath_rate: 25.00
+heart_rate: 77.00
+distance: 74.62
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.62
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -1.61     heart_phase: 0.19
+breath_rate: 25.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.22
+  y_point: 0.51
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -1.28     heart_phase: 0.00
+breath_rate: 25.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.30
+  y_point: 0.50
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.09       breath_phase: -0.44     heart_phase: -0.11
+breath_rate: 24.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.20
+  y_point: 0.64
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: 0.32      heart_phase: -0.41
+breath_rate: 23.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.14
+  y_point: 0.45
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.53       breath_phase: 0.92      heart_phase: 0.85
+breath_rate: 23.00
+heart_rate: 79.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.73
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.38      breath_phase: 1.28      heart_phase: -0.22
+breath_rate: 23.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.18
+  y_point: 0.69
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.78      breath_phase: 1.34      heart_phase: -0.39
+breath_rate: 22.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.25
+  y_point: 0.66
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.14      breath_phase: 1.03      heart_phase: 0.18
+breath_rate: 22.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.14
+  y_point: 0.60
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 1.00       breath_phase: 0.51      heart_phase: 0.13
+breath_rate: 22.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.09
+  y_point: 0.59
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.36       breath_phase: 0.13      heart_phase: -0.12
+breath_rate: 22.00
+heart_rate: 81.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.06
+  y_point: 0.62
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.02       breath_phase: 0.08      heart_phase: -0.19
+breath_rate: 22.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.21
+  y_point: 0.57
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -0.03      breath_phase: 0.31      heart_phase: 0.34
+breath_rate: 21.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.23
+  y_point: 0.66
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -0.50      breath_phase: 0.64      heart_phase: -0.01
+breath_rate: 21.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.27
+  y_point: 0.69
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -0.84      breath_phase: 0.85      heart_phase: -0.14
+breath_rate: 21.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.23
+  y_point: 0.70
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -0.05      breath_phase: 0.77      heart_phase: 0.03
+breath_rate: 21.00
+heart_rate: 82.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.00
+  y_point: 0.65
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 1.19       breath_phase: 0.49      heart_phase: 0.02
+breath_rate: 21.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 0.59
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.06       breath_phase: 0.30      heart_phase: -0.12
+breath_rate: 20.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 0.59
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -0.02      breath_phase: 0.30      heart_phase: -0.08
+breath_rate: 20.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.06
+  y_point: 0.56
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: 0.39      heart_phase: 0.43
+breath_rate: 20.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.15
+  y_point: 0.79
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: 0.49      heart_phase: -0.13
+breath_rate: 20.00
+heart_rate: 84.00
+distance: 74.62
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.03
+  y_point: 0.76
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.03      breath_phase: 0.41      heart_phase: -0.31
+breath_rate: 19.00
+distance: 74.62
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 0.84
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+total_phase: 0.00       breath_phase: -0.05     heart_phase: 0.33
+breath_rate: 19.00
+distance: 74.62
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.15
+  y_point: 0.78
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+total_phase: -0.06      breath_phase: -0.65     heart_phase: -0.11
+breath_rate: 19.00
+distance: 74.62
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 0.84
+  dop_index: -3
+  cluster_index: 0
+  move_speed: -51.84 cm/s
+total_phase: 0.95       breath_phase: -1.13     heart_phase: -0.28
+breath_rate: 19.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.16
+  y_point: 0.92
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+total_phase: 0.18       breath_phase: -1.24     heart_phase: 0.35
+breath_rate: 19.00
+heart_rate: 86.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.28
+  y_point: 0.94
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+total_phase: 0.39       breath_phase: -0.95     heart_phase: -0.18
+breath_rate: 19.00
+distance: 91.84
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.23
+  y_point: 0.87
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+total_phase: 0.00       breath_phase: -0.39     heart_phase: 0.29
+breath_rate: 18.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.15
+  y_point: 0.86
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+total_phase: 0.00       breath_phase: 0.20      heart_phase: -0.34
+breath_rate: 18.00
+distance: 91.84
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.21
+  y_point: 1.01
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+total_phase: 0.91       breath_phase: 0.57      heart_phase: 0.23
+breath_rate: 18.00
+distance: 97.58
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.06
+  y_point: 1.06
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+total_phase: -0.05      breath_phase: 0.76      heart_phase: -0.11
+breath_rate: 18.00
+heart_rate: 86.00
+distance: 103.32
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 1.18
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+total_phase: 0.00       breath_phase: 0.81      heart_phase: -0.25
+breath_rate: 18.00
+distance: 114.80
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.08
+  y_point: 1.14
+  dop_index: -3
+  cluster_index: 0
+  move_speed: -51.84 cm/s
+total_phase: 0.00       breath_phase: 0.61      heart_phase: 0.32
+breath_rate: 18.00
+distance: 109.06
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.06
+  y_point: 1.02
+  dop_index: -3
+  cluster_index: 0
+  move_speed: -51.84 cm/s
+total_phase: -0.83      breath_phase: 0.08      heart_phase: 0.21
+breath_rate: 18.00
+distance: 103.32
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.09
+  y_point: 0.94
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+total_phase: 0.00       breath_phase: -0.65     heart_phase: -0.25
+breath_rate: 18.00
+distance: 91.84
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.16
+  y_point: 0.79
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+total_phase: 0.00       breath_phase: -1.32     heart_phase: -0.19
+breath_rate: 18.00
+heart_rate: 86.00
+distance: 80.36
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 0.76
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+total_phase: 1.23       breath_phase: -1.70     heart_phase: 0.03
+breath_rate: 18.00
+distance: 74.62
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.02
+  y_point: 0.66
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+total_phase: 0.00       breath_phase: -1.55     heart_phase: 0.20
+breath_rate: 19.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.04
+  y_point: 0.60
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -0.98     heart_phase: -0.18
+breath_rate: 19.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 0.63
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+total_phase: 1.83       breath_phase: -0.41     heart_phase: 0.29
+breath_rate: 19.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.25
+  y_point: 0.55
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+total_phase: 0.02       breath_phase: -0.13     heart_phase: -0.01
+breath_rate: 19.00
+heart_rate: 85.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.05
+  y_point: 0.56
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.57       breath_phase: -0.20     heart_phase: -0.19
+breath_rate: 19.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.13
+  y_point: 0.51
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.95       breath_phase: -0.26     heart_phase: -0.61
+breath_rate: 19.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.12
+  y_point: 0.56
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 1.41       breath_phase: 0.06      heart_phase: 1.12
+breath_rate: 20.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.07
+  y_point: 0.55
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.68       breath_phase: 1.08      heart_phase: -0.78
+breath_rate: 20.00
+heart_rate: 84.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.06
+  y_point: 0.49
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: 2.64      heart_phase: 0.30
+breath_rate: 20.00
+distance: 45.92
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.06
+  y_point: 0.56
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.89       breath_phase: 4.45      heart_phase: -0.10
+breath_rate: 20.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.08
+  y_point: 0.58
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: 5.88      heart_phase: 0.05
+breath_rate: 20.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.02
+  y_point: 0.51
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 1.07       breath_phase: 6.44      heart_phase: 0.07
+breath_rate: 20.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.15
+  y_point: 0.54
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -1.21      breath_phase: 5.98      heart_phase: -0.03
+breath_rate: 19.00
+heart_rate: 84.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.12
+  y_point: 0.55
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 1.57       breath_phase: 4.56      heart_phase: -0.29
+breath_rate: 19.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.05
+  y_point: 0.56
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.09       breath_phase: 2.92      heart_phase: 0.71
+breath_rate: 18.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.00
+  y_point: 0.54
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.08      breath_phase: 1.69      heart_phase: -1.43
+breath_rate: 18.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.14
+  y_point: 0.56
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: 0.68      heart_phase: 1.37
+breath_rate: 18.00
+distance: 57.40
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 0.57
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -0.08     heart_phase: 0.14
+breath_rate: 17.00
+heart_rate: 84.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.08
+  y_point: 0.56
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.26       breath_phase: -0.60     heart_phase: -0.86
+breath_rate: 17.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.08
+  y_point: 0.56
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.25      breath_phase: -0.79     heart_phase: 0.23
+breath_rate: 17.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.08
+  y_point: 0.53
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.14       breath_phase: -0.58     heart_phase: -0.27
+breath_rate: 16.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.04
+  y_point: 0.51
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.60       breath_phase: -0.20     heart_phase: 0.38
+breath_rate: 16.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.05
+  y_point: 0.56
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -2.16      breath_phase: 0.04      heart_phase: 0.39
+breath_rate: 16.00
+heart_rate: 84.00
+distance: 51.66
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.15
+  y_point: 0.62
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: -0.19     heart_phase: -0.52
+breath_rate: 16.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.15
+  y_point: 0.67
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -2.18      breath_phase: -0.96     heart_phase: 0.18
+breath_rate: 15.00
+distance: 63.14
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.18
+  y_point: 0.68
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -0.96      breath_phase: -2.28     heart_phase: -0.47
+breath_rate: 15.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.29
+  y_point: 0.64
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: 0.29       breath_phase: -3.90     heart_phase: 0.69
+breath_rate: 15.00
+distance: 68.88
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 0.74
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: 0.00       breath_phase: -5.22     heart_phase: -0.32
+breath_rate: 15.00
+heart_rate: 84.00
+distance: 74.62
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.08
+  y_point: 0.89
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: 0.00       breath_phase: -5.78     heart_phase: -0.24
+breath_rate: 14.00
+distance: 86.10
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.12
+  y_point: 0.99
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: -5.59     heart_phase: 0.29
+breath_rate: 14.00
+distance: 97.58
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.13
+  y_point: 1.03
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: 0.00       breath_phase: -4.82     heart_phase: 0.20
+breath_rate: 14.00
+distance: 103.32
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 1.10
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: -3.73     heart_phase: -0.19
+breath_rate: 14.00
+distance: 109.06
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 1.16
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: -2.47     heart_phase: -0.17
+breath_rate: 14.00
+heart_rate: 84.00
+distance: 114.80
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.04
+  y_point: 1.21
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+total_phase: 1.76       breath_phase: -1.20     heart_phase: -0.03
+breath_rate: 14.00
+distance: 114.80
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.08
+  y_point: 1.25
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: -0.06      breath_phase: 0.05      heart_phase: 0.24
+breath_rate: 13.00
+distance: 120.54
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.35
+  y_point: 1.27
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.00       breath_phase: 0.95      heart_phase: -0.27
+breath_rate: 13.00
+distance: 126.28
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.16
+  y_point: 1.31
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.11      breath_phase: 1.19      heart_phase: 0.63
+breath_rate: 13.00
+distance: 126.28
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 1.37
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -1.00      breath_phase: 0.80      heart_phase: -0.42
+breath_rate: 13.00
+heart_rate: 84.00
+distance: 132.02
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.15
+  y_point: 1.38
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -0.05     heart_phase: -0.30
+breath_rate: 13.00
+distance: 137.76
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.06
+  y_point: 1.42
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -0.13      breath_phase: -1.13     heart_phase: 0.22
+breath_rate: 13.00
+distance: 137.76
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.17
+  y_point: 1.44
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -2.29     heart_phase: 0.08
+breath_rate: 13.00
+distance: 143.50
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.23
+  y_point: 1.39
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.29       breath_phase: -3.26     heart_phase: 0.31
+breath_rate: 12.00
+distance: 137.76
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.32
+  y_point: 1.35
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: -1.29      breath_phase: -3.80     heart_phase: -0.61
+breath_rate: 13.00
+heart_rate: 84.00
+distance: 137.76
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 1.49
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.24       breath_phase: -4.22     heart_phase: 0.05
+breath_rate: 13.00
+distance: 137.76
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 1.51
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 1.89       breath_phase: -4.59     heart_phase: -0.03
+breath_rate: 14.00
+distance: 137.76
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.22
+  y_point: 1.49
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+total_phase: 0.00       breath_phase: -3.99     heart_phase: -1.00
+breath_rate: 14.00
+distance: 149.24
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.18
+  y_point: 1.49
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+total_phase: 0.45       breath_phase: -2.74     heart_phase: 0.40
+breath_rate: 14.00
+distance: 149.24
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.19
+  y_point: 1.49
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+distance: 143.50
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.20
+  y_point: 1.50
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+distance: 149.24
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.28
+  y_point: 1.49
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+distance: 149.24
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.16
+  y_point: 1.57
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+distance: 154.98
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.21
+  y_point: 1.66
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+distance: 166.46
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.26
+  y_point: 1.75
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+distance: 172.20
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.02
+  y_point: 1.79
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+distance: 172.20
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.01
+  y_point: 2.00
+  dop_index: 5
+  cluster_index: 0
+  move_speed: 86.40 cm/s
+distance: 172.20
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.00
+  y_point: 2.07
+  dop_index: 5
+  cluster_index: 0
+  move_speed: 86.40 cm/s
+distance: 172.20
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.03
+  y_point: 2.24
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 172.20
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.12
+  y_point: 2.56
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 172.20
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.22
+  y_point: 2.51
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 172.20
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.00
+  y_point: 2.57
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 172.20
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.05
+  y_point: 2.57
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 172.20
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.09
+  y_point: 2.51
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 172.20
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.03
+  y_point: 2.46
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 172.20
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 1.93
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 189.42
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.02
+  y_point: 1.87
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 183.68
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.03
+  y_point: 1.86
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 183.68
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.03
+  y_point: 1.93
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 189.42
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.03
+  y_point: 1.94
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 189.42
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.01
+  y_point: 2.02
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+distance: 200.90
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.03
+  y_point: 2.07
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+distance: 200.90
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.03
+  y_point: 2.15
+  dop_index: 3
+  cluster_index: 0
+  move_speed: 51.84 cm/s
+distance: 218.12
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 2.28
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 218.12
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.02
+  y_point: 2.17
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 218.12
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.04
+  y_point: 2.33
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 229.60
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.00
+  y_point: 2.56
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+distance: 229.60
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.08
+  y_point: 2.67
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 229.60
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.06
+  y_point: 2.76
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 229.60
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.01
+  y_point: 2.60
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 229.60
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 2.47
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 246.82
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.04
+  y_point: 2.55
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 246.82
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.07
+  y_point: 2.63
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 258.30
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.00
+  y_point: 2.72
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 264.04
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.00
+  y_point: 2.72
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 269.78
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.00
+  y_point: 2.72
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 269.78
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.11
+  y_point: 2.69
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 258.30
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.02
+  y_point: 2.67
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 258.30
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.01
+  y_point: 2.55
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 258.30
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.07
+  y_point: 2.58
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 258.30
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.03
+  y_point: 2.60
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 258.30
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.03
+  y_point: 2.60
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 264.04
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.09
+  y_point: 2.81
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 269.78
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.03
+  y_point: 2.60
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 264.04
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 2.47
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 252.56
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.08
+  y_point: 2.44
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 241.08
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.04
+  y_point: 2.39
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 235.34
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.12
+  y_point: 2.38
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 229.60
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.14
+  y_point: 2.22
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.04
+  y_point: 2.24
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.04
+  y_point: 1.98
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.06
+  y_point: 1.71
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 1.64
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 1.64
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 1.64
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 1.64
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 1.64
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 1.64
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 1.64
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 1.64
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.00
+  y_point: 1.78
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.00
+  y_point: 1.78
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.00
+  y_point: 1.78
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.00
+  y_point: 1.78
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.00
+  y_point: 1.78
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.00
+  y_point: 1.78
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.00
+  y_point: 1.78
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 1.80
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 1.80
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 1.80
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 1.80
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 1.80
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 1.80
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 1.80
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 1.80
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 1.80
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 1.80
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 1.80
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 1.80
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 1.80
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 1.80
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.01
+  y_point: 1.80
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.05
+  y_point: 2.03
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.02
+  y_point: 2.22
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 218.12
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.04
+  y_point: 2.26
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 218.12
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.12
+  y_point: 2.52
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 229.60
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.04
+  y_point: 2.41
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 235.34
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.02
+  y_point: 2.46
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 241.08
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.02
+  y_point: 2.40
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 229.60
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.01
+  y_point: 2.26
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.03
+  y_point: 2.41
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 235.34
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.08
+  y_point: 2.39
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 235.34
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.11
+  y_point: 2.36
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 235.34
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.11
+  y_point: 2.30
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 229.60
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.15
+  y_point: 2.35
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 229.60
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.12
+  y_point: 2.64
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 229.60
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.00
+  y_point: 2.76
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 229.60
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.12
+  y_point: 2.44
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 241.08
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.12
+  y_point: 2.44
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 241.08
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.09
+  y_point: 2.38
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 235.34
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.05
+  y_point: 2.40
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 235.34
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.05
+  y_point: 2.40
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 235.34
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.09
+  y_point: 2.41
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 246.82
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.01
+  y_point: 2.58
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 246.82
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.05
+  y_point: 2.58
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 258.30
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.04
+  y_point: 2.88
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 258.30
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.03
+  y_point: 2.73
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 264.04
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.20
+  y_point: 2.52
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 258.30
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.02
+  y_point: 2.63
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 252.56
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.09
+  y_point: 2.37
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 252.56
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.05
+  y_point: 2.30
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 252.56
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 2.23
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 252.56
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.04
+  y_point: 2.08
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 252.56
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.03
+  y_point: 2.31
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 252.56
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 2.36
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 235.34
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.18
+  y_point: 2.35
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 235.34
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 2.04
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 235.34
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 2.15
+  dop_index: -2
+  cluster_index: 0
+  move_speed: -34.56 cm/s
+distance: 235.34
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.08
+  y_point: 2.14
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 235.34
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.07
+  y_point: 2.03
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 235.34
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.11
+  y_point: 2.26
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 223.86
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.13
+  y_point: 2.28
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 229.60
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.10
+  y_point: 2.37
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 229.60
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.02
+  y_point: 2.07
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 206.64
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.13
+  y_point: 2.05
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 206.64
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.17
+  y_point: 2.35
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 206.64
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.27
+  y_point: 2.23
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 206.64
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.25
+  y_point: 2.67
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+distance: 206.64
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.12
+  y_point: 2.70
+  dop_index: 2
+  cluster_index: 0
+  move_speed: 34.56 cm/s
+distance: 206.64
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.06
+  y_point: 2.66
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 206.64
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.06
+  y_point: 2.66
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 206.64
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.21
+  y_point: 2.34
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 206.64
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.13
+  y_point: 2.18
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 212.38
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.40
+  y_point: 2.16
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 212.38
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.17
+  y_point: 2.50
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 246.82
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.05
+  y_point: 2.46
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 246.82
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.02
+  y_point: 2.54
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 252.56
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.04
+  y_point: 2.45
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 241.08
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.03
+  y_point: 2.49
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 241.08
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.11
+  y_point: 2.80
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 241.08
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.11
+  y_point: 2.67
+  dop_index: 1
+  cluster_index: 0
+  move_speed: 17.28 cm/s
+distance: 241.08
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: -0.05
+  y_point: 2.54
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 252.56
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.04
+  y_point: 2.77
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 252.56
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.04
+  y_point: 2.71
+  dop_index: -1
+  cluster_index: 0
+  move_speed: -17.28 cm/s
+distance: 258.30
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.04
+  y_point: 2.62
+  dop_index: -3
+  cluster_index: 0
+  move_speed: -51.84 cm/s
+distance: 264.04
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.09
+  y_point: 2.66
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 264.04
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.09
+  y_point: 2.66
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 264.04
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.09
+  y_point: 2.66
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
+distance: 264.04
+-----Human Detected-----
+-----Got Target Info-----
+Number of targets: 1
+Target 1:
+  x_point: 0.09
+  y_point: 2.66
+  dop_index: 0
+  cluster_index: 0
+  move_speed: 0.00 cm/s
