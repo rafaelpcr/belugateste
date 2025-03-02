@@ -33,7 +33,8 @@ db_config = {
     "user": os.getenv("DB_USER", "belugaDB"),
     "password": os.getenv("DB_PASSWORD", "Rpcr@300476"),
     "database": os.getenv("DB_NAME", "Beluga_Analytics"),
-    "port": os.getenv("DB_PORT", 3306)
+    "port": int(os.getenv("DB_PORT", 3306)),
+    "ssl_disabled": True  # Desativa SSL
 }
 
 app = Flask(__name__)
