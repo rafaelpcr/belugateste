@@ -6,7 +6,6 @@ from flask import Flask, request, jsonify
 import os
 from dotenv import load_dotenv
 import traceback
-import ssl
 
 # Configuração básica de logging
 logging.basicConfig(
@@ -21,19 +20,15 @@ logging.basicConfig(
 # Carregar variáveis de ambiente
 load_dotenv()
 
-# Configurações do MySQL com SSL
-ssl_context = ssl.create_default_context()
-ssl_context.verify_mode = ssl.CERT_NONE  # Use apenas se o certificado não for verificável
-
+# Configurações do MySQL sem SSL
 db_config = {
     "host": os.getenv("DB_HOST", "168.75.89.11"),
     "user": os.getenv("DB_USER", "belugaDB"),
     "password": os.getenv("DB_PASSWORD", "Rpcr@300476"),
     "database": os.getenv("DB_NAME", "Beluga_Analytics"),
     "port": int(os.getenv("DB_PORT", 3306)),
-    "ssl_ca": False,
-    "ssl_verify_cert": False,
-    "ssl_verify_identity": False
+    "use_pure": True,  # Usar driver Python puro
+    "ssl_disabled": True  # Desabilitar SSL completamente
 }
 
 app = Flask(__name__)
