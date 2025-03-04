@@ -28,8 +28,17 @@ db_config = {
     "password": os.getenv("DB_PASSWORD", "Rpcr@300476"),
     "database": os.getenv("DB_NAME", "Beluga_Analytics"),
     "port": int(os.getenv("DB_PORT", 3306)),
+    "ssl_disabled": True,
     "use_pure": True,
-    "auth_plugin": 'mysql_native_password'
+    "auth_plugin": 'mysql_native_password',
+    "allow_insecure_ssl": True,
+    "ssl": {
+        "verify_cert": False,
+        "verify_identity": False,
+        "ca": None,
+        "cert": None,
+        "key": None,
+    }
 }
 
 app = Flask(__name__)
@@ -38,7 +47,9 @@ class DatabaseManager:
     def __init__(self):
         try:
             self.connect()
-            self.create_table()
+            self.create_tables()
+            self.last_sequence = self.get_last_sequence()
+            self.last_move_speed = None
         except Exception as e:
             logger.error(f"Erro na inicialização do DatabaseManager: {e}")
             logger.error(traceback.format_exc())
@@ -49,35 +60,76 @@ class DatabaseManager:
             logger.info("Tentando conectar ao banco de dados...")
             logger.debug(f"Configurações de conexão: {db_config}")
             self.conn = mysql.connector.connect(**db_config)
-            self.cursor = self.conn.cursor(dictionary=True)  # Retorna resultados como dicionários
+            self.cursor = self.conn.cursor(dictionary=True)
             logger.info("✅ Conexão com o banco de dados estabelecida com sucesso!")
         except Exception as e:
             logger.error(f"❌ Erro ao conectar ao banco de dados: {e}")
             logger.error(traceback.format_exc())
             raise
 
-    def create_table(self):
-        """Cria a tabela se não existir"""
+    def create_tables(self):
+        """Cria as tabelas e views necessárias"""
         try:
-            logger.info("Verificando/criando tabela radar_dados...")
+            logger.info("Verificando/criando tabela radar_interacoes...")
+            
+            # Criar tabela principal
             self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS radar_dados (
+                CREATE TABLE IF NOT EXISTS radar_interacoes (
                     id INT AUTO_INCREMENT PRIMARY KEY,
+                    device_id VARCHAR(50),
                     x_point FLOAT,
                     y_point FLOAT,
                     move_speed FLOAT,
-                    heart_rate FLOAT NULL,
-                    breath_rate FLOAT NULL,
-                    timestamp DATETIME,
-                    device_id VARCHAR(50) NULL
+                    heart_rate FLOAT,
+                    breath_rate FLOAT,
+                    sequencia_engajamento INT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            
+            # Criar view de engajamento
+            self.cursor.execute("""
+                CREATE OR REPLACE VIEW engajamento AS
+                SELECT 
+                    sequencia_engajamento, 
+                    COUNT(*) / 5 AS segundos_parado 
+                FROM radar_interacoes 
+                WHERE move_speed = 0 
+                GROUP BY sequencia_engajamento
+            """)
+            
             self.conn.commit()
-            logger.info("✅ Tabela radar_dados verificada/criada com sucesso!")
+            logger.info("✅ Tabelas e views criadas/atualizadas com sucesso!")
         except Exception as e:
-            logger.error(f"❌ Erro ao criar tabela: {e}")
+            logger.error(f"❌ Erro ao criar tabelas: {e}")
             logger.error(traceback.format_exc())
             raise
+
+    def get_last_sequence(self):
+        """Obtém a última sequência de engajamento"""
+        try:
+            self.cursor.execute("""
+                SELECT MAX(sequencia_engajamento) as last_seq 
+                FROM radar_interacoes
+            """)
+            result = self.cursor.fetchone()
+            return result['last_seq'] if result and result['last_seq'] is not None else 0
+        except Exception as e:
+            logger.error(f"Erro ao obter última sequência: {e}")
+            return 0
+
+    def calculate_engagement_sequence(self, move_speed):
+        """Calcula a sequência de engajamento"""
+        if self.last_move_speed is None:
+            self.last_move_speed = move_speed
+            return self.last_sequence
+        
+        # Se mudou de movimento para parado ou vice-versa, incrementa a sequência
+        if (self.last_move_speed == 0 and move_speed > 0) or (self.last_move_speed > 0 and move_speed == 0):
+            self.last_sequence += 1
+        
+        self.last_move_speed = move_speed
+        return self.last_sequence
 
     def insert_data(self, data):
         """Insere dados no banco"""
@@ -86,19 +138,23 @@ class DatabaseManager:
                 logger.warning("Reconectando ao banco de dados...")
                 self.connect()
             
+            # Calcular sequência de engajamento
+            move_speed = float(data['move_speed'])
+            sequence = self.calculate_engagement_sequence(move_speed)
+            
             sql = """
-                INSERT INTO radar_dados
-                (x_point, y_point, move_speed, heart_rate, breath_rate, timestamp, device_id)
+                INSERT INTO radar_interacoes
+                (device_id, x_point, y_point, move_speed, heart_rate, breath_rate, sequencia_engajamento)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
             values = (
-                float(data['x_point']),  # Convertendo para float
+                str(data.get('device_id', 'UNKNOWN')),
+                float(data['x_point']),
                 float(data['y_point']),
-                float(data['move_speed']),
-                float(data.get('heart_rate', 0)) or None,  # Tratamento para valores nulos
+                move_speed,
+                float(data.get('heart_rate', 0)) or None,
                 float(data.get('breath_rate', 0)) or None,
-                datetime.now(),
-                str(data.get('device_id', 'UNKNOWN'))
+                sequence
             )
             
             logger.info("📝 Inserindo dados no banco...")
@@ -123,8 +179,12 @@ class DatabaseManager:
                 self.connect()
             
             sql = """
-                SELECT * FROM radar_dados 
-                ORDER BY timestamp DESC 
+                SELECT 
+                    r.*,
+                    COALESCE(e.segundos_parado, 0) as segundos_parado
+                FROM radar_interacoes r
+                LEFT JOIN engajamento e ON r.sequencia_engajamento = e.sequencia_engajamento
+                ORDER BY r.timestamp DESC 
                 LIMIT %s
             """
             self.cursor.execute(sql, (limit,))
@@ -139,6 +199,25 @@ class DatabaseManager:
             logger.error(f"Erro ao buscar registros: {e}")
             logger.error(traceback.format_exc())
             raise
+
+    def get_engagement_stats(self):
+        """Retorna estatísticas de engajamento"""
+        try:
+            sql = """
+                SELECT 
+                    sequencia_engajamento,
+                    segundos_parado,
+                    (SELECT COUNT(*) FROM radar_interacoes WHERE sequencia_engajamento = e.sequencia_engajamento) as total_registros
+                FROM engajamento e
+                ORDER BY sequencia_engajamento DESC
+                LIMIT 10
+            """
+            self.cursor.execute(sql)
+            return self.cursor.fetchall()
+        except Exception as e:
+            logger.error(f"Erro ao buscar estatísticas de engajamento: {e}")
+            logger.error(traceback.format_exc())
+            return []
 
 # Instância global do gerenciador de banco de dados
 try:
@@ -246,16 +325,40 @@ def get_status():
         status = {
             "server": "online",
             "database": "offline",
-            "last_records": None
+            "last_records": None,
+            "engagement_stats": None
         }
 
         if db_manager and db_manager.conn.is_connected():
             status["database"] = "online"
             status["last_records"] = db_manager.get_last_records(5)
+            status["engagement_stats"] = db_manager.get_engagement_stats()
 
         return jsonify(status)
     except Exception as e:
         logger.error(f"Erro ao verificar status: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@app.route('/radar/engagement', methods=['GET'])
+def get_engagement():
+    """Endpoint para obter estatísticas de engajamento"""
+    try:
+        if not db_manager:
+            return jsonify({
+                "status": "error",
+                "message": "Banco de dados não disponível"
+            }), 500
+
+        stats = db_manager.get_engagement_stats()
+        return jsonify({
+            "status": "success",
+            "data": stats
+        })
+    except Exception as e:
+        logger.error(f"Erro ao buscar engajamento: {e}")
         return jsonify({
             "status": "error",
             "message": str(e)
@@ -269,6 +372,7 @@ if __name__ == "__main__":
     print("🚀 Servidor Radar iniciando...")
     print(f"📡 Endpoint dados: http://{host}:{port}/radar/data")
     print(f"ℹ️  Endpoint status: http://{host}:{port}/radar/status")
+    print(f"📊 Endpoint engajamento: http://{host}:{port}/radar/engagement")
     print("⚡ Use Ctrl+C para encerrar")
     print("="*50 + "\n")
     
