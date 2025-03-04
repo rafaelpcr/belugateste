@@ -258,6 +258,34 @@ def validate_data(data):
     except Exception as e:
         return False, str(e)
 
+def convert_radar_data(data):
+    """Converte dados do formato do radar para o formato do banco"""
+    try:
+        # Extrair coordenadas do primeiro alvo (se existir)
+        targets = data.get('targets', [])
+        if not targets:
+            return None, "Nenhum alvo detectado"
+        
+        first_target = targets[0]
+        
+        # Calcular move_speed baseado na distância
+        # Se a distância mudou, consideramos que houve movimento
+        distance = float(data.get('distance', 0))
+        move_speed = 0 if distance == 0 else 1
+        
+        converted_data = {
+            'x_point': float(first_target.get('x', 0)),
+            'y_point': float(first_target.get('y', 0)),
+            'move_speed': move_speed,
+            'heart_rate': float(data.get('heart', 0)),
+            'breath_rate': float(data.get('breath', 0)),
+            'device_id': data.get('device_id', 'UNKNOWN')
+        }
+        
+        return converted_data, None
+    except Exception as e:
+        return None, f"Erro ao converter dados: {str(e)}"
+
 @app.route('/radar/data', methods=['POST'])
 def receive_radar_data():
     """Endpoint para receber dados do radar"""
@@ -276,8 +304,20 @@ def receive_radar_data():
 
         # Tentar parsear o JSON
         try:
-            data = request.get_json()
-            logger.debug(f"Dados recebidos: {data}")
+            raw_data = request.get_json()
+            logger.debug(f"Dados brutos recebidos: {raw_data}")
+            
+            # Converter dados do formato do radar
+            converted_data, error = convert_radar_data(raw_data)
+            if error:
+                logger.error(f"❌ Erro na conversão dos dados: {error}")
+                return jsonify({
+                    "status": "error",
+                    "message": error
+                }), 400
+            
+            logger.debug(f"Dados convertidos: {converted_data}")
+            
         except Exception as e:
             logger.error(f"❌ Erro ao parsear JSON: {e}")
             return jsonify({
@@ -285,8 +325,8 @@ def receive_radar_data():
                 "message": "JSON inválido"
             }), 400
 
-        # Validar dados
-        is_valid, error_message = validate_data(data)
+        # Validar dados convertidos
+        is_valid, error_message = validate_data(converted_data)
         if not is_valid:
             logger.error(f"❌ Dados inválidos: {error_message}")
             return jsonify({
@@ -303,11 +343,12 @@ def receive_radar_data():
             }), 500
         
         # Salvar no banco
-        db_manager.insert_data(data)
+        db_manager.insert_data(converted_data)
         
         return jsonify({
             "status": "success",
-            "message": "Dados processados com sucesso"
+            "message": "Dados processados com sucesso",
+            "processed_data": converted_data
         })
 
     except Exception as e:
