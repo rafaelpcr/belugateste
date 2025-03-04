@@ -29,8 +29,11 @@ def convert_radar_data(raw_data):
     try:
         logger.debug(f"Convertendo dados brutos: {raw_data}")
         
-        # Extrair coordenadas do primeiro alvo
+        # Extrair dados do radar
+        device_id = raw_data.get('id_dispositivo', '00:00:00:00:00:00')
+        tipo_sensor = raw_data.get('tipo_sensor', 'UNKNOWN')
         targets = raw_data.get('targets', [])
+        
         if not targets:
             return None, "Nenhum alvo detectado nos dados"
         
@@ -38,12 +41,12 @@ def convert_radar_data(raw_data):
         
         # Processar dados
         converted_data = {
+            'device_id': device_id,
             'x_point': float(first_target.get('x', 0)),
             'y_point': float(first_target.get('y', 0)),
-            'move_speed': 1 if float(raw_data.get('distance', 0)) > 0 else 0,
-            'heart_rate': float(raw_data.get('heart', 0)),
-            'breath_rate': float(raw_data.get('breath', 0)),
-            'device_id': raw_data.get('device_id', 'UNKNOWN')
+            'move_speed': 1 if float(raw_data.get('distancia', 0)) > 0 else 0,
+            'heart_rate': float(raw_data.get('respiracao', 0)),
+            'breath_rate': float(raw_data.get('velocidade', 0))
         }
         
         logger.debug(f"Dados convertidos: {converted_data}")
