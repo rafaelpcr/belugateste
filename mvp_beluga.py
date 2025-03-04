@@ -6,6 +6,7 @@ from flask import Flask, request, jsonify
 import os
 from dotenv import load_dotenv
 import traceback
+import time
 
 # Configuração básica de logging
 logging.basicConfig(
@@ -21,58 +22,69 @@ logger = logging.getLogger('radar_app')
 # Carregar variáveis de ambiente
 load_dotenv()
 
-# Configurações do MySQL sem SSL
+# Configurações mais simples do MySQL
 db_config = {
-    "host": os.getenv("DB_HOST", "168.75.89.11"),
-    "user": os.getenv("DB_USER", "belugaDB"),
-    "password": os.getenv("DB_PASSWORD", "Rpcr@300476"),
-    "database": os.getenv("DB_NAME", "Beluga_Analytics"),
-    "port": int(os.getenv("DB_PORT", 3306)),
-    "ssl_disabled": True,
-    "use_pure": True,
-    "auth_plugin": 'mysql_native_password',
-    "allow_insecure_ssl": True,
-    "ssl": {
-        "verify_cert": False,
-        "verify_identity": False,
-        "ca": None,
-        "cert": None,
-        "key": None,
-    }
+    "host": "168.75.89.11",
+    "user": "belugaDB",
+    "password": "Rpcr@300476",
+    "database": "Beluga_Analytics",
+    "port": 3306,
+    "connect_timeout": 60,  # Aumentado timeout
+    "use_pure": True
 }
 
 app = Flask(__name__)
 
 class DatabaseManager:
     def __init__(self):
-        try:
-            self.connect()
-            self.create_tables()
-            self.last_sequence = self.get_last_sequence()
-            self.last_move_speed = None
-        except Exception as e:
-            logger.error(f"Erro na inicialização do DatabaseManager: {e}")
-            logger.error(traceback.format_exc())
-    
-    def connect(self):
-        """Estabelece conexão com o banco de dados"""
-        try:
-            logger.info("Tentando conectar ao banco de dados...")
-            logger.debug(f"Configurações de conexão: {db_config}")
-            self.conn = mysql.connector.connect(**db_config)
-            self.cursor = self.conn.cursor(dictionary=True)
-            logger.info("✅ Conexão com o banco de dados estabelecida com sucesso!")
-        except Exception as e:
-            logger.error(f"❌ Erro ao conectar ao banco de dados: {e}")
-            logger.error(traceback.format_exc())
-            raise
+        self.conn = None
+        self.cursor = None
+        self.last_sequence = 0
+        self.last_move_speed = None
+        self.connect_with_retry()
+        
+    def connect_with_retry(self, max_attempts=5):
+        """Tenta conectar ao banco com retry"""
+        attempt = 0
+        while attempt < max_attempts:
+            try:
+                attempt += 1
+                logger.info(f"Tentativa {attempt} de {max_attempts} para conectar ao banco...")
+                
+                # Fechar conexão anterior se existir
+                if self.conn:
+                    try:
+                        self.conn.close()
+                        logger.info("Conexão anterior fechada")
+                    except:
+                        pass
+                
+                # Criar nova conexão
+                self.conn = mysql.connector.connect(**db_config)
+                self.cursor = self.conn.cursor(dictionary=True)
+                
+                # Testar conexão
+                self.cursor.execute("SELECT 1")
+                self.cursor.fetchone()
+                
+                logger.info("✅ Conexão estabelecida com sucesso!")
+                
+                # Inicializar banco se necessário
+                self.initialize_database()
+                return True
+                
+            except Exception as e:
+                logger.error(f"❌ Tentativa {attempt} falhou: {str(e)}")
+                if attempt == max_attempts:
+                    logger.error("Todas as tentativas de conexão falharam!")
+                    raise
+                time.sleep(2)  # Espera 2 segundos antes da próxima tentativa
+        return False
 
-    def create_tables(self):
-        """Cria as tabelas e views necessárias"""
+    def initialize_database(self):
+        """Inicializa o banco de dados"""
         try:
-            logger.info("Verificando/criando tabela radar_interacoes...")
-            
-            # Criar tabela principal
+            # Criar tabela
             self.cursor.execute("""
                 CREATE TABLE IF NOT EXISTS radar_interacoes (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -87,7 +99,7 @@ class DatabaseManager:
                 )
             """)
             
-            # Criar view de engajamento
+            # Criar view
             self.cursor.execute("""
                 CREATE OR REPLACE VIEW engajamento AS
                 SELECT 
@@ -99,86 +111,88 @@ class DatabaseManager:
             """)
             
             self.conn.commit()
-            logger.info("✅ Tabelas e views criadas/atualizadas com sucesso!")
+            logger.info("✅ Banco de dados inicializado com sucesso!")
+            
+            # Obter última sequência
+            self.cursor.execute("SELECT MAX(sequencia_engajamento) as last_seq FROM radar_interacoes")
+            result = self.cursor.fetchone()
+            self.last_sequence = result['last_seq'] if result and result['last_seq'] is not None else 0
+            
         except Exception as e:
-            logger.error(f"❌ Erro ao criar tabelas: {e}")
-            logger.error(traceback.format_exc())
+            logger.error(f"❌ Erro ao inicializar banco: {str(e)}")
             raise
 
-    def get_last_sequence(self):
-        """Obtém a última sequência de engajamento"""
+    def ensure_connection(self):
+        """Verifica e reconecta se necessário"""
         try:
-            self.cursor.execute("""
-                SELECT MAX(sequencia_engajamento) as last_seq 
-                FROM radar_interacoes
-            """)
-            result = self.cursor.fetchone()
-            return result['last_seq'] if result and result['last_seq'] is not None else 0
+            if not self.conn or not self.conn.is_connected():
+                logger.warning("Conexão perdida. Tentando reconectar...")
+                return self.connect_with_retry()
+            return True
         except Exception as e:
-            logger.error(f"Erro ao obter última sequência: {e}")
-            return 0
+            logger.error(f"Erro ao verificar conexão: {str(e)}")
+            return False
 
-    def calculate_engagement_sequence(self, move_speed):
-        """Calcula a sequência de engajamento"""
-        if self.last_move_speed is None:
-            self.last_move_speed = move_speed
-            return self.last_sequence
-        
-        # Se mudou de movimento para parado ou vice-versa, incrementa a sequência
-        if (self.last_move_speed == 0 and move_speed > 0) or (self.last_move_speed > 0 and move_speed == 0):
-            self.last_sequence += 1
-        
-        self.last_move_speed = move_speed
-        return self.last_sequence
+    def execute_query(self, query, params=None):
+        """Executa uma query com retry"""
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                if not self.ensure_connection():
+                    raise Exception("Não foi possível estabelecer conexão")
+                
+                self.cursor.execute(query, params)
+                if query.strip().upper().startswith(('INSERT', 'UPDATE', 'DELETE')):
+                    self.conn.commit()
+                return self.cursor.fetchall() if query.strip().upper().startswith('SELECT') else None
+                
+            except Exception as e:
+                logger.error(f"Erro na tentativa {attempt + 1}: {str(e)}")
+                if attempt == max_retries - 1:
+                    raise
+                time.sleep(1)
+                self.connect_with_retry()
 
     def insert_data(self, data):
         """Insere dados no banco"""
         try:
-            if not self.conn.is_connected():
-                logger.warning("Reconectando ao banco de dados...")
-                self.connect()
-            
-            # Calcular sequência de engajamento
+            # Validar e converter dados
             move_speed = float(data['move_speed'])
-            sequence = self.calculate_engagement_sequence(move_speed)
+            x_point = float(data['x_point'])
+            y_point = float(data['y_point'])
+            heart_rate = float(data.get('heart_rate', 0)) or None
+            breath_rate = float(data.get('breath_rate', 0)) or None
+            device_id = str(data.get('device_id', 'UNKNOWN'))
             
-            sql = """
+            # Calcular sequência
+            if self.last_move_speed is None:
+                self.last_move_speed = move_speed
+            elif (self.last_move_speed == 0 and move_speed > 0) or (self.last_move_speed > 0 and move_speed == 0):
+                self.last_sequence += 1
+            self.last_move_speed = move_speed
+            
+            # Inserir dados
+            query = """
                 INSERT INTO radar_interacoes
                 (device_id, x_point, y_point, move_speed, heart_rate, breath_rate, sequencia_engajamento)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
-            values = (
-                str(data.get('device_id', 'UNKNOWN')),
-                float(data['x_point']),
-                float(data['y_point']),
-                move_speed,
-                float(data.get('heart_rate', 0)) or None,
-                float(data.get('breath_rate', 0)) or None,
-                sequence
-            )
+            params = (device_id, x_point, y_point, move_speed, heart_rate, breath_rate, self.last_sequence)
             
-            logger.info("📝 Inserindo dados no banco...")
-            logger.debug(f"SQL: {sql}")
-            logger.debug(f"Valores: {values}")
-            
-            self.cursor.execute(sql, values)
-            self.conn.commit()
+            logger.info(f"Inserindo dados: {params}")
+            self.execute_query(query, params)
             logger.info("✅ Dados inseridos com sucesso!")
             return True
+            
         except Exception as e:
-            logger.error(f"❌ Erro ao inserir dados: {e}")
+            logger.error(f"❌ Erro ao inserir dados: {str(e)}")
             logger.error(f"Dados recebidos: {data}")
-            logger.error(traceback.format_exc())
-            self.conn.rollback()
             raise
 
     def get_last_records(self, limit=5):
-        """Retorna os últimos registros inseridos"""
+        """Obtém últimos registros"""
         try:
-            if not self.conn.is_connected():
-                self.connect()
-            
-            sql = """
+            query = """
                 SELECT 
                     r.*,
                     COALESCE(e.segundos_parado, 0) as segundos_parado
@@ -187,8 +201,7 @@ class DatabaseManager:
                 ORDER BY r.timestamp DESC 
                 LIMIT %s
             """
-            self.cursor.execute(sql, (limit,))
-            records = self.cursor.fetchall()
+            records = self.execute_query(query, (limit,))
             
             # Converter datetime para string
             for record in records:
@@ -196,14 +209,13 @@ class DatabaseManager:
             
             return records
         except Exception as e:
-            logger.error(f"Erro ao buscar registros: {e}")
-            logger.error(traceback.format_exc())
-            raise
+            logger.error(f"Erro ao buscar registros: {str(e)}")
+            return []
 
     def get_engagement_stats(self):
-        """Retorna estatísticas de engajamento"""
+        """Obtém estatísticas de engajamento"""
         try:
-            sql = """
+            query = """
                 SELECT 
                     sequencia_engajamento,
                     segundos_parado,
@@ -212,11 +224,9 @@ class DatabaseManager:
                 ORDER BY sequencia_engajamento DESC
                 LIMIT 10
             """
-            self.cursor.execute(sql)
-            return self.cursor.fetchall()
+            return self.execute_query(query)
         except Exception as e:
-            logger.error(f"Erro ao buscar estatísticas de engajamento: {e}")
-            logger.error(traceback.format_exc())
+            logger.error(f"Erro ao buscar estatísticas: {str(e)}")
             return []
 
 # Instância global do gerenciador de banco de dados
