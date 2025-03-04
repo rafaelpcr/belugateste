@@ -29,11 +29,39 @@ db_config = {
     "password": "Rpcr@300476",
     "database": "Beluga_Analytics",
     "port": 3306,
-    "connect_timeout": 60,  # Aumentado timeout
+    "connect_timeout": 60,
     "use_pure": True
 }
 
 app = Flask(__name__)
+
+def convert_radar_data(raw_data):
+    """Converte dados do radar para o formato do banco"""
+    try:
+        logger.debug(f"Convertendo dados brutos: {raw_data}")
+        
+        # Extrair coordenadas do primeiro alvo
+        targets = raw_data.get('targets', [])
+        if not targets:
+            return None, "Nenhum alvo detectado nos dados"
+        
+        first_target = targets[0]
+        
+        # Processar dados
+        converted_data = {
+            'x_point': float(first_target.get('x', 0)),
+            'y_point': float(first_target.get('y', 0)),
+            'move_speed': 1 if float(raw_data.get('distance', 0)) > 0 else 0,
+            'heart_rate': float(raw_data.get('heart', 0)),
+            'breath_rate': float(raw_data.get('breath', 0)),
+            'device_id': raw_data.get('device_id', 'UNKNOWN')
+        }
+        
+        logger.debug(f"Dados convertidos: {converted_data}")
+        return converted_data, None
+    except Exception as e:
+        logger.error(f"Erro ao converter dados: {str(e)}")
+        return None, f"Erro ao converter dados: {str(e)}"
 
 class DatabaseManager:
     def __init__(self):
@@ -51,15 +79,12 @@ class DatabaseManager:
                 attempt += 1
                 logger.info(f"Tentativa {attempt} de {max_attempts} para conectar ao banco...")
                 
-                # Fechar conexão anterior se existir
                 if self.conn:
                     try:
                         self.conn.close()
-                        logger.info("Conexão anterior fechada")
                     except:
                         pass
                 
-                # Criar nova conexão
                 self.conn = mysql.connector.connect(**db_config)
                 self.cursor = self.conn.cursor(dictionary=True)
                 
@@ -68,8 +93,6 @@ class DatabaseManager:
                 self.cursor.fetchone()
                 
                 logger.info("✅ Conexão estabelecida com sucesso!")
-                
-                # Inicializar banco se necessário
                 self.initialize_database()
                 return True
                 
@@ -78,7 +101,7 @@ class DatabaseManager:
                 if attempt == max_attempts:
                     logger.error("Todas as tentativas de conexão falharam!")
                     raise
-                time.sleep(2)  # Espera 2 segundos antes da próxima tentativa
+                time.sleep(2)
         return False
 
     def initialize_database(self):
@@ -122,76 +145,64 @@ class DatabaseManager:
             logger.error(f"❌ Erro ao inicializar banco: {str(e)}")
             raise
 
-    def ensure_connection(self):
-        """Verifica e reconecta se necessário"""
-        try:
-            if not self.conn or not self.conn.is_connected():
-                logger.warning("Conexão perdida. Tentando reconectar...")
-                return self.connect_with_retry()
-            return True
-        except Exception as e:
-            logger.error(f"Erro ao verificar conexão: {str(e)}")
-            return False
-
-    def execute_query(self, query, params=None):
-        """Executa uma query com retry"""
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                if not self.ensure_connection():
-                    raise Exception("Não foi possível estabelecer conexão")
-                
-                self.cursor.execute(query, params)
-                if query.strip().upper().startswith(('INSERT', 'UPDATE', 'DELETE')):
-                    self.conn.commit()
-                return self.cursor.fetchall() if query.strip().upper().startswith('SELECT') else None
-                
-            except Exception as e:
-                logger.error(f"Erro na tentativa {attempt + 1}: {str(e)}")
-                if attempt == max_retries - 1:
-                    raise
-                time.sleep(1)
-                self.connect_with_retry()
-
     def insert_data(self, data):
         """Insere dados no banco"""
         try:
-            # Validar e converter dados
-            move_speed = float(data['move_speed'])
-            x_point = float(data['x_point'])
-            y_point = float(data['y_point'])
-            heart_rate = float(data.get('heart_rate', 0)) or None
-            breath_rate = float(data.get('breath_rate', 0)) or None
-            device_id = str(data.get('device_id', 'UNKNOWN'))
-            
             # Calcular sequência
+            move_speed = float(data['move_speed'])
             if self.last_move_speed is None:
                 self.last_move_speed = move_speed
             elif (self.last_move_speed == 0 and move_speed > 0) or (self.last_move_speed > 0 and move_speed == 0):
                 self.last_sequence += 1
             self.last_move_speed = move_speed
             
-            # Inserir dados
+            # Preparar query
             query = """
                 INSERT INTO radar_interacoes
                 (device_id, x_point, y_point, move_speed, heart_rate, breath_rate, sequencia_engajamento)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
-            params = (device_id, x_point, y_point, move_speed, heart_rate, breath_rate, self.last_sequence)
             
-            logger.info(f"Inserindo dados: {params}")
-            self.execute_query(query, params)
+            # Preparar parâmetros
+            params = (
+                str(data['device_id']),
+                float(data['x_point']),
+                float(data['y_point']),
+                move_speed,
+                float(data['heart_rate']) if data['heart_rate'] else None,
+                float(data['breath_rate']) if data['breath_rate'] else None,
+                self.last_sequence
+            )
+            
+            # Executar inserção
+            if not self.conn or not self.conn.is_connected():
+                self.connect_with_retry()
+            
+            logger.debug(f"Executando query: {query}")
+            logger.debug(f"Parâmetros: {params}")
+            
+            self.cursor.execute(query, params)
+            self.conn.commit()
+            
             logger.info("✅ Dados inseridos com sucesso!")
             return True
             
         except Exception as e:
             logger.error(f"❌ Erro ao inserir dados: {str(e)}")
-            logger.error(f"Dados recebidos: {data}")
+            logger.error(f"Dados: {data}")
+            if self.conn:
+                try:
+                    self.conn.rollback()
+                except:
+                    pass
             raise
 
     def get_last_records(self, limit=5):
         """Obtém últimos registros"""
         try:
+            if not self.conn or not self.conn.is_connected():
+                self.connect_with_retry()
+                
             query = """
                 SELECT 
                     r.*,
@@ -201,11 +212,14 @@ class DatabaseManager:
                 ORDER BY r.timestamp DESC 
                 LIMIT %s
             """
-            records = self.execute_query(query, (limit,))
+            
+            self.cursor.execute(query, (limit,))
+            records = self.cursor.fetchall()
             
             # Converter datetime para string
             for record in records:
-                record['timestamp'] = record['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+                if isinstance(record['timestamp'], datetime):
+                    record['timestamp'] = record['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
             
             return records
         except Exception as e:
@@ -215,6 +229,9 @@ class DatabaseManager:
     def get_engagement_stats(self):
         """Obtém estatísticas de engajamento"""
         try:
+            if not self.conn or not self.conn.is_connected():
+                self.connect_with_retry()
+                
             query = """
                 SELECT 
                     sequencia_engajamento,
@@ -224,7 +241,9 @@ class DatabaseManager:
                 ORDER BY sequencia_engajamento DESC
                 LIMIT 10
             """
-            return self.execute_query(query)
+            
+            self.cursor.execute(query)
+            return self.cursor.fetchall()
         except Exception as e:
             logger.error(f"Erro ao buscar estatísticas: {str(e)}")
             return []
@@ -239,120 +258,39 @@ except Exception as e:
     logger.error(traceback.format_exc())
     db_manager = None
 
-def validate_data(data):
-    """Valida os dados recebidos"""
-    try:
-        required_fields = ['x_point', 'y_point', 'move_speed']
-        
-        # Verifica campos obrigatórios
-        if not all(field in data for field in required_fields):
-            missing = [field for field in required_fields if field not in data]
-            return False, f"Campos obrigatórios faltando: {missing}"
-
-        # Verifica tipos de dados
-        for field in ['x_point', 'y_point', 'move_speed']:
-            try:
-                float(data[field])
-            except (ValueError, TypeError):
-                return False, f"Campo {field} deve ser um número válido"
-
-        # Verifica campos opcionais
-        for field in ['heart_rate', 'breath_rate']:
-            if field in data and data[field] is not None:
-                try:
-                    float(data[field])
-                except (ValueError, TypeError):
-                    return False, f"Campo {field} deve ser um número válido"
-
-        return True, None
-    except Exception as e:
-        return False, str(e)
-
-def convert_radar_data(data):
-    """Converte dados do formato do radar para o formato do banco"""
-    try:
-        # Extrair coordenadas do primeiro alvo (se existir)
-        targets = data.get('targets', [])
-        if not targets:
-            return None, "Nenhum alvo detectado"
-        
-        first_target = targets[0]
-        
-        # Calcular move_speed baseado na distância
-        # Se a distância mudou, consideramos que houve movimento
-        distance = float(data.get('distance', 0))
-        move_speed = 0 if distance == 0 else 1
-        
-        converted_data = {
-            'x_point': float(first_target.get('x', 0)),
-            'y_point': float(first_target.get('y', 0)),
-            'move_speed': move_speed,
-            'heart_rate': float(data.get('heart', 0)),
-            'breath_rate': float(data.get('breath', 0)),
-            'device_id': data.get('device_id', 'UNKNOWN')
-        }
-        
-        return converted_data, None
-    except Exception as e:
-        return None, f"Erro ao converter dados: {str(e)}"
-
 @app.route('/radar/data', methods=['POST'])
 def receive_radar_data():
     """Endpoint para receber dados do radar"""
     try:
         logger.info("📡 Requisição POST recebida em /radar/data")
-        logger.debug(f"Headers: {dict(request.headers)}")
         
         # Verificar Content-Type
         if not request.is_json:
-            logger.error("❌ Content-Type não é application/json")
-            logger.debug(f"Content-Type recebido: {request.content_type}")
             return jsonify({
                 "status": "error",
                 "message": "Content-Type deve ser application/json"
             }), 400
 
-        # Tentar parsear o JSON
-        try:
-            raw_data = request.get_json()
-            logger.debug(f"Dados brutos recebidos: {raw_data}")
-            
-            # Converter dados do formato do radar
-            converted_data, error = convert_radar_data(raw_data)
-            if error:
-                logger.error(f"❌ Erro na conversão dos dados: {error}")
-                return jsonify({
-                    "status": "error",
-                    "message": error
-                }), 400
-            
-            logger.debug(f"Dados convertidos: {converted_data}")
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao parsear JSON: {e}")
+        # Obter e validar dados
+        raw_data = request.get_json()
+        logger.debug(f"Dados brutos recebidos: {raw_data}")
+        
+        # Converter dados
+        converted_data, error = convert_radar_data(raw_data)
+        if error:
             return jsonify({
                 "status": "error",
-                "message": "JSON inválido"
+                "message": error
             }), 400
-
-        # Validar dados convertidos
-        is_valid, error_message = validate_data(converted_data)
-        if not is_valid:
-            logger.error(f"❌ Dados inválidos: {error_message}")
-            return jsonify({
-                "status": "error",
-                "message": error_message
-            }), 400
-
+        
         # Verificar DatabaseManager
-        if db_manager is None:
-            logger.error("❌ DatabaseManager não está disponível")
+        if not db_manager:
             return jsonify({
                 "status": "error",
-                "message": "Erro interno do servidor: Banco de dados não disponível"
+                "message": "Banco de dados não disponível"
             }), 500
         
-        # Salvar no banco
+        # Inserir dados
         db_manager.insert_data(converted_data)
         
         return jsonify({
@@ -362,16 +300,16 @@ def receive_radar_data():
         })
 
     except Exception as e:
-        logger.error(f"❌ Erro ao processar dados: {e}")
+        logger.error(f"❌ Erro ao processar requisição: {str(e)}")
         logger.error(traceback.format_exc())
         return jsonify({
             "status": "error",
-            "message": f"Erro interno do servidor: {str(e)}"
+            "message": f"Erro interno: {str(e)}"
         }), 500
 
 @app.route('/radar/status', methods=['GET'])
 def get_status():
-    """Endpoint para verificar status do servidor e últimos dados"""
+    """Endpoint para verificar status"""
     try:
         status = {
             "server": "online",
@@ -380,14 +318,14 @@ def get_status():
             "engagement_stats": None
         }
 
-        if db_manager and db_manager.conn.is_connected():
+        if db_manager and db_manager.conn and db_manager.conn.is_connected():
             status["database"] = "online"
             status["last_records"] = db_manager.get_last_records(5)
             status["engagement_stats"] = db_manager.get_engagement_stats()
 
         return jsonify(status)
     except Exception as e:
-        logger.error(f"Erro ao verificar status: {e}")
+        logger.error(f"Erro ao verificar status: {str(e)}")
         return jsonify({
             "status": "error",
             "message": str(e)
@@ -395,7 +333,7 @@ def get_status():
 
 @app.route('/radar/engagement', methods=['GET'])
 def get_engagement():
-    """Endpoint para obter estatísticas de engajamento"""
+    """Endpoint para estatísticas de engajamento"""
     try:
         if not db_manager:
             return jsonify({
@@ -409,7 +347,7 @@ def get_engagement():
             "data": stats
         })
     except Exception as e:
-        logger.error(f"Erro ao buscar engajamento: {e}")
+        logger.error(f"Erro ao buscar engajamento: {str(e)}")
         return jsonify({
             "status": "error",
             "message": str(e)
