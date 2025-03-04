@@ -22,17 +22,6 @@ logger = logging.getLogger('radar_app')
 # Carregar variáveis de ambiente
 load_dotenv()
 
-# Configurações mais simples do MySQL
-db_config = {
-    "host": "168.75.89.11",
-    "user": "belugaDB",
-    "password": "Rpcr@300476",
-    "database": "Beluga_Analytics",
-    "port": 3306,
-    "connect_timeout": 60,
-    "use_pure": True
-}
-
 app = Flask(__name__)
 
 def convert_radar_data(raw_data):
@@ -85,7 +74,15 @@ class DatabaseManager:
                     except:
                         pass
                 
-                self.conn = mysql.connector.connect(**db_config)
+                # Usando configuração recomendada para desativar SSL
+                self.conn = mysql.connector.connect(
+                    host="168.75.89.11",
+                    user="belugaDB",
+                    password="Rpcr@300476",
+                    database="Beluga_Analytics",
+                    port=3306,
+                    ssl_ca=None
+                )
                 self.cursor = self.conn.cursor(dictionary=True)
                 
                 # Testar conexão
@@ -354,7 +351,7 @@ def get_engagement():
         }), 500
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 3000))
     host = os.getenv("HOST", "0.0.0.0")
     
     print("\n" + "="*50)
