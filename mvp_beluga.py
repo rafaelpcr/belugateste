@@ -74,14 +74,15 @@ class DatabaseManager:
                     except:
                         pass
                 
-                # Usando configuração recomendada para desativar SSL
+                # Usando driver puro Python e configurações SSL mais simples
                 self.conn = mysql.connector.connect(
                     host="168.75.89.11",
                     user="belugaDB",
                     password="Rpcr@300476",
                     database="Beluga_Analytics",
                     port=3306,
-                    ssl_ca=None
+                    use_pure=True,  # Força o uso do driver puro Python
+                    ssl_disabled=True  # Desabilita SSL temporariamente
                 )
                 self.cursor = self.conn.cursor(dictionary=True)
                 
