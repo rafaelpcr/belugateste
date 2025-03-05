@@ -99,39 +99,21 @@ class DatabaseManager:
     def initialize_database(self):
         """Inicializa o banco de dados"""
         try:
-            # Criar tabela
+            # Criar tabela simplificada
             self.cursor.execute("""
                 CREATE TABLE IF NOT EXISTS radar_interacoes (
                     id INT AUTO_INCREMENT PRIMARY KEY,
-                    device_id VARCHAR(50),
                     x_point FLOAT,
                     y_point FLOAT,
                     move_speed FLOAT,
                     heart_rate FLOAT,
                     breath_rate FLOAT,
-                    sequencia_engajamento INT,
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             """)
             
-            # Criar view
-            self.cursor.execute("""
-                CREATE OR REPLACE VIEW engajamento AS
-                SELECT 
-                    sequencia_engajamento, 
-                    COUNT(*) / 5 AS segundos_parado 
-                FROM radar_interacoes 
-                WHERE move_speed = 0 
-                GROUP BY sequencia_engajamento
-            """)
-            
             self.conn.commit()
             logger.info("✅ Banco de dados inicializado com sucesso!")
-            
-            # Obter última sequência
-            self.cursor.execute("SELECT MAX(sequencia_engajamento) as last_seq FROM radar_interacoes")
-            result = self.cursor.fetchone()
-            self.last_sequence = result['last_seq'] if result and result['last_seq'] is not None else 0
             
         except Exception as e:
             logger.error(f"❌ Erro ao inicializar banco: {str(e)}")
@@ -140,30 +122,20 @@ class DatabaseManager:
     def insert_data(self, data):
         """Insere dados no banco"""
         try:
-            # Calcular sequência
-            move_speed = float(data['move_speed'])
-            if self.last_move_speed is None:
-                self.last_move_speed = move_speed
-            elif (self.last_move_speed == 0 and move_speed > 0) or (self.last_move_speed > 0 and move_speed == 0):
-                self.last_sequence += 1
-            self.last_move_speed = move_speed
-            
-            # Preparar query
+            # Preparar query simplificada
             query = """
                 INSERT INTO radar_interacoes
-                (device_id, x_point, y_point, move_speed, heart_rate, breath_rate, sequencia_engajamento)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                (x_point, y_point, move_speed, heart_rate, breath_rate)
+                VALUES (%s, %s, %s, %s, %s)
             """
             
             # Preparar parâmetros
             params = (
-                str(data['device_id']),
                 float(data['x_point']),
                 float(data['y_point']),
-                move_speed,
+                float(data['move_speed']),
                 float(data['heart_rate']) if data['heart_rate'] else None,
-                float(data['breath_rate']) if data['breath_rate'] else None,
-                self.last_sequence
+                float(data['breath_rate']) if data['breath_rate'] else None
             )
             
             # Executar inserção
@@ -196,12 +168,8 @@ class DatabaseManager:
                 self.connect_with_retry()
                 
             query = """
-                SELECT 
-                    r.*,
-                    COALESCE(e.segundos_parado, 0) as segundos_parado
-                FROM radar_interacoes r
-                LEFT JOIN engajamento e ON r.sequencia_engajamento = e.sequencia_engajamento
-                ORDER BY r.timestamp DESC 
+                SELECT * FROM radar_interacoes
+                ORDER BY timestamp DESC 
                 LIMIT %s
             """
             
