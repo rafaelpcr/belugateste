@@ -186,28 +186,6 @@ class DatabaseManager:
             logger.error(f"Erro ao buscar registros: {str(e)}")
             return []
 
-    def get_engagement_stats(self):
-        """Obtém estatísticas de engajamento"""
-        try:
-            if not self.conn or not self.conn.is_connected():
-                self.connect_with_retry()
-                
-            query = """
-                SELECT 
-                    sequencia_engajamento,
-                    segundos_parado,
-                    (SELECT COUNT(*) FROM radar_dados WHERE sequencia_engajamento = e.sequencia_engajamento) as total_registros
-                FROM engajamento e
-                ORDER BY sequencia_engajamento DESC
-                LIMIT 10
-            """
-            
-            self.cursor.execute(query)
-            return self.cursor.fetchall()
-        except Exception as e:
-            logger.error(f"Erro ao buscar estatísticas: {str(e)}")
-            return []
-
 # Instância global do gerenciador de banco de dados
 try:
     logger.info("Iniciando DatabaseManager...")
@@ -274,14 +252,12 @@ def get_status():
         status = {
             "server": "online",
             "database": "offline",
-            "last_records": None,
-            "engagement_stats": None
+            "last_records": None
         }
 
         if db_manager and db_manager.conn and db_manager.conn.is_connected():
             status["database"] = "online"
             status["last_records"] = db_manager.get_last_records(5)
-            status["engagement_stats"] = db_manager.get_engagement_stats()
 
         return jsonify(status)
     except Exception as e:
@@ -291,37 +267,14 @@ def get_status():
             "message": str(e)
         }), 500
 
-@app.route('/radar/engagement', methods=['GET'])
-def get_engagement():
-    """Endpoint para estatísticas de engajamento"""
-    try:
-        if not db_manager:
-            return jsonify({
-                "status": "error",
-                "message": "Banco de dados não disponível"
-            }), 500
-
-        stats = db_manager.get_engagement_stats()
-        return jsonify({
-            "status": "success",
-            "data": stats
-        })
-    except Exception as e:
-        logger.error(f"Erro ao buscar engajamento: {str(e)}")
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
-
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8080))
+    port = int(os.getenv("PORT", 3000))
     host = os.getenv("HOST", "0.0.0.0")
     
     print("\n" + "="*50)
     print("🚀 Servidor Radar iniciando...")
     print(f"📡 Endpoint dados: http://{host}:{port}/radar/data")
     print(f"ℹ️  Endpoint status: http://{host}:{port}/radar/status")
-    print(f"📊 Endpoint engajamento: http://{host}:{port}/radar/engagement")
     print("⚡ Use Ctrl+C para encerrar")
     print("="*50 + "\n")
     
