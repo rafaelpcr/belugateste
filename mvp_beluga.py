@@ -101,7 +101,7 @@ class DatabaseManager:
         try:
             # Criar tabela simplificada
             self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS radar_interacoes (
+                CREATE TABLE IF NOT EXISTS radar_dados (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     x_point FLOAT,
                     y_point FLOAT,
@@ -124,7 +124,7 @@ class DatabaseManager:
         try:
             # Preparar query simplificada
             query = """
-                INSERT INTO radar_interacoes
+                INSERT INTO radar_dados
                 (x_point, y_point, move_speed, heart_rate, breath_rate)
                 VALUES (%s, %s, %s, %s, %s)
             """
@@ -168,7 +168,7 @@ class DatabaseManager:
                 self.connect_with_retry()
                 
             query = """
-                SELECT * FROM radar_interacoes
+                SELECT * FROM radar_dados
                 ORDER BY timestamp DESC 
                 LIMIT %s
             """
@@ -196,7 +196,7 @@ class DatabaseManager:
                 SELECT 
                     sequencia_engajamento,
                     segundos_parado,
-                    (SELECT COUNT(*) FROM radar_interacoes WHERE sequencia_engajamento = e.sequencia_engajamento) as total_registros
+                    (SELECT COUNT(*) FROM radar_dados WHERE sequencia_engajamento = e.sequencia_engajamento) as total_registros
                 FROM engajamento e
                 ORDER BY sequencia_engajamento DESC
                 LIMIT 10
