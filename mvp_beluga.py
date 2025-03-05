@@ -29,30 +29,21 @@ def convert_radar_data(raw_data):
     try:
         logger.debug(f"Convertendo dados brutos: {raw_data}")
         
-        # Extrair dados do radar
-        device_id = raw_data.get('id_dispositivo', '00:00:00:00:00:00')
-        tipo_sensor = raw_data.get('tipo_sensor', 'UNKNOWN')
-        targets = raw_data.get('targets', [])
-        
-        if not targets:
-            return None, "Nenhum alvo detectado nos dados"
-        
-        first_target = targets[0]
-        
-        # Processar dados
+        # Processar dados diretamente do formato do radar
         converted_data = {
-            'device_id': device_id,
-            'x_point': float(first_target.get('x', 0)),
-            'y_point': float(first_target.get('y', 0)),
-            'move_speed': 1 if float(raw_data.get('distancia', 0)) > 0 else 0,
-            'heart_rate': float(raw_data.get('respiracao', 0)),
-            'breath_rate': float(raw_data.get('velocidade', 0))
+            'device_id': 'RADAR_1',  # ID fixo para identificar o radar
+            'x_point': float(raw_data.get('x', 0)),
+            'y_point': float(raw_data.get('y', 0)),
+            'move_speed': float(raw_data.get('move_speed', 0)),
+            'heart_rate': float(raw_data.get('heart_rate', 0)),
+            'breath_rate': float(raw_data.get('breath_rate', 0))
         }
         
-        logger.debug(f"Dados convertidos: {converted_data}")
+        logger.info(f"✅ Dados convertidos com sucesso: {converted_data}")
         return converted_data, None
     except Exception as e:
-        logger.error(f"Erro ao converter dados: {str(e)}")
+        logger.error(f"❌ Erro ao converter dados: {str(e)}")
+        logger.error(f"Stack trace: {traceback.format_exc()}")
         return None, f"Erro ao converter dados: {str(e)}"
 
 class DatabaseManager:
