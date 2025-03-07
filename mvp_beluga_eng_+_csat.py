@@ -36,8 +36,8 @@ def convert_radar_data(raw_data):
             'x_point': float(raw_data.get('x', 0)),
             'y_point': float(raw_data.get('y', 0)),
             'move_speed': float(raw_data.get('move_speed', 0)),
-            'heart_rate': float(raw_data.get('heart_rate', 0)),
-            'breath_rate': float(raw_data.get('breath_rate', 0))
+            'heart_rate': float(raw_data.get('heart_rate', 0)) if raw_data.get('heart_rate') is not None else None,
+            'breath_rate': float(raw_data.get('breath_rate', 0)) if raw_data.get('breath_rate') is not None else None
         }
         
         logger.info(f"✅ Dados convertidos com sucesso: {converted_data}")
@@ -124,9 +124,31 @@ class DatabaseManager:
             logger.error(f"❌ Erro ao inicializar banco: {str(e)}")
             raise
 
-    def insert_data(self, data, analytics_data):
+    def insert_data(self, data, analytics_data=None):
         """Insere dados no banco"""
         try:
+            logger.info("="*50)
+            logger.info("Iniciando inserção de dados no banco...")
+            
+            # Verificar conexão antes de inserir
+            if not self.conn or not self.conn.is_connected():
+                logger.info("Conexão não disponível, tentando reconectar...")
+                self.connect_with_retry()
+            
+            # Valores padrão para analytics
+            satisfaction_score = None
+            satisfaction_class = None
+            is_engaged = False
+            engagement_duration = 0
+            
+            # Extrair dados de analytics se disponíveis
+            if analytics_data:
+                if 'satisfaction' in analytics_data:
+                    satisfaction_score = analytics_data['satisfaction'].get('score')
+                    satisfaction_class = analytics_data['satisfaction'].get('classification')
+                is_engaged = bool(analytics_data.get('engaged', False))
+                engagement_duration = int(analytics_data.get('engagement_duration', 0))
+            
             # Preparar query com campos adicionais
             query = """
                 INSERT INTO radar_dados
@@ -137,39 +159,59 @@ class DatabaseManager:
             
             # Preparar parâmetros
             params = (
-                float(data['x_point']),
-                float(data['y_point']),
-                float(data['move_speed']),
-                float(data['heart_rate']) if data['heart_rate'] else None,
-                float(data['breath_rate']) if data['breath_rate'] else None,
-                float(analytics_data['satisfaction']['score']),
-                analytics_data['satisfaction']['classification'],
-                bool(analytics_data['engaged']),
-                int(analytics_data.get('engagement_duration', 0))
+                float(data.get('x_point', 0)),
+                float(data.get('y_point', 0)),
+                float(data.get('move_speed', 0)),
+                float(data.get('heart_rate', 0)) if data.get('heart_rate') is not None else None,
+                float(data.get('breath_rate', 0)) if data.get('breath_rate') is not None else None,
+                float(satisfaction_score) if satisfaction_score is not None else None,
+                satisfaction_class,
+                is_engaged,
+                engagement_duration
             )
             
+            logger.info(f"Query SQL: {query}")
+            logger.info(f"Parâmetros: {params}")
+            
             # Executar inserção
-            if not self.conn or not self.conn.is_connected():
-                self.connect_with_retry()
-            
-            logger.debug(f"Executando query: {query}")
-            logger.debug(f"Parâmetros: {params}")
-            
             self.cursor.execute(query, params)
             self.conn.commit()
             
             logger.info("✅ Dados inseridos com sucesso!")
+            logger.info("="*50)
             return True
             
-        except Exception as e:
-            logger.error(f"❌ Erro ao inserir dados: {str(e)}")
-            logger.error(f"Dados: {data}")
+        except mysql.connector.Error as e:
+            logger.error("="*50)
+            logger.error(f"❌ Erro MySQL ao inserir dados: {str(e)}")
+            logger.error(f"Código do erro: {e.errno}")
+            logger.error(f"Mensagem SQL State: {e.sqlstate}")
+            logger.error(f"Mensagem completa: {e.msg}")
+            logger.error(f"Dados que tentamos inserir: {data}")
             logger.error(f"Analytics: {analytics_data}")
+            logger.error("="*50)
+            
             if self.conn:
                 try:
                     self.conn.rollback()
-                except:
-                    pass
+                    logger.info("Rollback realizado com sucesso")
+                except Exception as rollback_error:
+                    logger.error(f"Erro ao fazer rollback: {str(rollback_error)}")
+            
+            # Tentar reconectar em caso de erro de conexão
+            if e.errno in [2006, 2013, 2055]:  # Códigos de erro de conexão
+                logger.info("Tentando reconectar após erro de conexão...")
+                self.connect_with_retry()
+            
+            raise
+            
+        except Exception as e:
+            logger.error("="*50)
+            logger.error(f"❌ Erro genérico ao inserir dados: {str(e)}")
+            logger.error(f"Stack trace: {traceback.format_exc()}")
+            logger.error(f"Dados que tentamos inserir: {data}")
+            logger.error(f"Analytics: {analytics_data}")
+            logger.error("="*50)
             raise
 
     def get_last_records(self, limit=5):
@@ -227,26 +269,64 @@ class AnalyticsManager:
         Calcula engajamento baseado no histórico de registros
         Retorna True se pessoa ficou parada por mais de 5 segundos
         """
-        if not records:
+        if not records or len(records) < 2:
+            return False
+            
+        # Filtrar registros válidos
+        valid_records = []
+        for record in records:
+            if (record.get('move_speed') is not None and 
+                record.get('timestamp') is not None):
+                valid_records.append(record)
+        
+        if len(valid_records) < 2:
             return False
             
         # Organizar registros por timestamp
-        sorted_records = sorted(records, key=lambda x: x['timestamp'] if x['timestamp'] else '')
+        try:
+            # Tentar ordenar por timestamp
+            sorted_records = sorted(valid_records, key=lambda x: x['timestamp'])
+        except (TypeError, ValueError):
+            logger.error("Erro ao ordenar registros por timestamp")
+            return False
         
         # Verificar sequência de registros "parados"
         start_time = None
         for record in sorted_records:
-            move_speed = record.get('move_speed')
-            if move_speed is not None and float(move_speed) <= self.MOVEMENT_THRESHOLD:
-                if start_time is None:
-                    start_time = datetime.strptime(record['timestamp'], '%Y-%m-%d %H:%M:%S')
+            try:
+                move_speed = float(record.get('move_speed', 999))
+                
+                if move_speed <= self.MOVEMENT_THRESHOLD:
+                    # Pessoa está parada
+                    timestamp = record.get('timestamp')
+                    
+                    # Converter timestamp para datetime se for string
+                    current_time = None
+                    if isinstance(timestamp, str):
+                        try:
+                            current_time = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+                        except ValueError:
+                            logger.error(f"Formato de timestamp inválido: {timestamp}")
+                            continue
+                    elif isinstance(timestamp, datetime):
+                        current_time = timestamp
+                    else:
+                        logger.error(f"Tipo de timestamp não suportado: {type(timestamp)}")
+                        continue
+                    
+                    if start_time is None:
+                        start_time = current_time
+                    else:
+                        duration = (current_time - start_time).total_seconds()
+                        logger.info(f"Duração parado: {duration} segundos")
+                        if duration >= self.ENGAGEMENT_TIME_THRESHOLD:
+                            return True
                 else:
-                    current_time = datetime.strptime(record['timestamp'], '%Y-%m-%d %H:%M:%S')
-                    duration = (current_time - start_time).total_seconds()
-                    if duration >= self.ENGAGEMENT_TIME_THRESHOLD:
-                        return True
-            else:
-                start_time = None
+                    # Pessoa está se movendo
+                    start_time = None
+            except Exception as e:
+                logger.error(f"Erro ao processar registro para engajamento: {str(e)}")
+                continue
                 
         return False
         
@@ -307,56 +387,97 @@ def receive_radar_data():
     """Endpoint para receber dados do radar"""
     try:
         logger.info("📡 Requisição POST recebida em /radar/data")
+        logger.info(f"Headers: {request.headers}")
         
         # Verificar Content-Type
         if not request.is_json:
+            logger.error("❌ Content-Type não é application/json")
             return jsonify({
                 "status": "error",
                 "message": "Content-Type deve ser application/json"
             }), 400
-
-        # Obter e validar dados
+        
+        # Obter dados
         raw_data = request.get_json()
-        logger.debug(f"Dados brutos recebidos: {raw_data}")
+        logger.info(f"Dados recebidos: {raw_data}")
+        
+        # Verificar se há dados
+        if not raw_data:
+            logger.error("❌ Nenhum dado recebido")
+            return jsonify({
+                "status": "error",
+                "message": "Nenhum dado recebido"
+            }), 400
         
         # Converter dados
         converted_data, error = convert_radar_data(raw_data)
         if error:
+            logger.error(f"❌ Erro ao converter dados: {error}")
             return jsonify({
                 "status": "error",
                 "message": error
             }), 400
         
-        # Verificar DatabaseManager
+        # Verificar se o banco está disponível
         if not db_manager:
+            logger.error("❌ Banco de dados não disponível")
             return jsonify({
                 "status": "error",
                 "message": "Banco de dados não disponível"
             }), 500
         
-        # Calcular satisfação
-        satisfaction_data = analytics_manager.calculate_satisfaction(
-            converted_data.get('heart_rate'),
-            converted_data.get('breath_rate')
-        )
+        # Inicializar analytics
+        analytics_data = {
+            "satisfaction": {
+                "score": 0,
+                "classification": "NEUTRA",
+                "heart_score": 0,
+                "resp_score": 0
+            },
+            "engaged": False,
+            "engagement_duration": 0
+        }
         
-        # Verificar engajamento
-        last_records = db_manager.get_last_records(10)  # Últimos 10 registros para análise
-        is_engaged = analytics_manager.calculate_engagement(last_records)
+        # Calcular satisfação se houver dados suficientes
+        if converted_data.get('heart_rate') is not None or converted_data.get('breath_rate') is not None:
+            try:
+                satisfaction_data = analytics_manager.calculate_satisfaction(
+                    converted_data.get('heart_rate'),
+                    converted_data.get('breath_rate')
+                )
+                analytics_data["satisfaction"] = satisfaction_data
+            except Exception as e:
+                logger.error(f"❌ Erro ao calcular satisfação: {str(e)}")
+                logger.error(traceback.format_exc())
+        
+        # Verificar engajamento se houver dados suficientes
+        try:
+            last_records = db_manager.get_last_records(10)  # Últimos 10 registros para análise
+            if last_records:
+                is_engaged = analytics_manager.calculate_engagement(last_records)
+                analytics_data["engaged"] = is_engaged
+        except Exception as e:
+            logger.error(f"❌ Erro ao calcular engajamento: {str(e)}")
+            logger.error(traceback.format_exc())
+        
+        # Inserir dados
+        try:
+            db_manager.insert_data(converted_data, analytics_data)
+        except Exception as e:
+            logger.error(f"❌ Erro ao inserir dados: {str(e)}")
+            logger.error(traceback.format_exc())
+            return jsonify({
+                "status": "error",
+                "message": f"Erro ao inserir dados: {str(e)}"
+            }), 500
         
         # Adicionar métricas à resposta
         response_data = {
             "status": "success",
             "message": "Dados processados com sucesso",
             "processed_data": converted_data,
-            "analytics": {
-                "satisfaction": satisfaction_data,
-                "engaged": is_engaged
-            }
+            "analytics": analytics_data
         }
-        
-        # Inserir dados
-        db_manager.insert_data(converted_data, response_data['analytics'])
         
         return jsonify(response_data)
 
