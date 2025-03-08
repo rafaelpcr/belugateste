@@ -100,28 +100,64 @@ class DatabaseManager:
     def initialize_database(self):
         """Inicializa o banco de dados"""
         try:
-            # Criar tabela com campos adicionais
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS radar_dados (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    x_point FLOAT,
-                    y_point FLOAT,
-                    move_speed FLOAT,
-                    heart_rate FLOAT,
-                    breath_rate FLOAT,
-                    satisfaction_score FLOAT,
-                    satisfaction_class VARCHAR(20),
-                    is_engaged BOOLEAN,
-                    engagement_duration INT,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
+            # Verificar se a tabela existe
+            self.cursor.execute("SHOW TABLES LIKE 'radar_dados'")
+            table_exists = self.cursor.fetchone()
+            
+            if not table_exists:
+                # Criar tabela se não existir
+                logger.info("Criando tabela radar_dados...")
+                self.cursor.execute("""
+                    CREATE TABLE radar_dados (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        x_point FLOAT,
+                        y_point FLOAT,
+                        move_speed FLOAT,
+                        heart_rate FLOAT,
+                        breath_rate FLOAT,
+                        satisfaction_score FLOAT,
+                        satisfaction_class VARCHAR(20),
+                        is_engaged BOOLEAN,
+                        engagement_duration INT,
+                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                logger.info("Tabela radar_dados criada com sucesso!")
+            else:
+                # Verificar e adicionar colunas que estão faltando
+                logger.info("Verificando colunas da tabela radar_dados...")
+                
+                # Verificar se as colunas existem
+                self.cursor.execute("DESCRIBE radar_dados")
+                columns = self.cursor.fetchall()
+                existing_columns = [column['Field'] for column in columns]
+                
+                logger.info(f"Colunas existentes: {existing_columns}")
+                
+                # Colunas que devem existir
+                required_columns = {
+                    'satisfaction_score': 'ADD COLUMN satisfaction_score FLOAT',
+                    'satisfaction_class': 'ADD COLUMN satisfaction_class VARCHAR(20)',
+                    'is_engaged': 'ADD COLUMN is_engaged BOOLEAN',
+                    'engagement_duration': 'ADD COLUMN engagement_duration INT'
+                }
+                
+                # Adicionar colunas faltantes
+                for column, add_command in required_columns.items():
+                    if column not in existing_columns:
+                        logger.info(f"Adicionando coluna {column}...")
+                        try:
+                            self.cursor.execute(f"ALTER TABLE radar_dados {add_command}")
+                            logger.info(f"Coluna {column} adicionada com sucesso!")
+                        except Exception as e:
+                            logger.error(f"Erro ao adicionar coluna {column}: {str(e)}")
             
             self.conn.commit()
             logger.info("✅ Banco de dados inicializado com sucesso!")
             
         except Exception as e:
             logger.error(f"❌ Erro ao inicializar banco: {str(e)}")
+            logger.error(traceback.format_exc())
             raise
 
     def insert_data(self, data, analytics_data=None):
