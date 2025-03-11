@@ -944,7 +944,7 @@ def get_session(session_id):
         }), 500
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
+    port = int(os.getenv("PORT", 3000))
     host = os.getenv("HOST", "0.0.0.0")
     
     print("\n" + "="*50)
