@@ -206,6 +206,11 @@ class DatabaseManager:
                 is_engaged = bool(analytics_data.get('engaged', False))
                 engagement_duration = int(analytics_data.get('engagement_duration', 0))
             
+            # Verificar se o dado tem o campo is_engaged (prioridade sobre analytics)
+            if 'is_engaged' in data and data['is_engaged'] is not None:
+                is_engaged = bool(data['is_engaged'])
+                logger.info(f"Campo is_engaged encontrado nos dados: {is_engaged}")
+            
             # Preparar query com campos adicionais
             query = """
                 INSERT INTO radar_dados
@@ -464,8 +469,8 @@ except Exception as e:
 class AnalyticsManager:
     def __init__(self):
         # Constantes para engajamento
-        self.ENGAGEMENT_TIME_THRESHOLD = 5  # segundos
-        self.MOVEMENT_THRESHOLD = 0.1  # limite para considerar "parado"
+        self.ENGAGEMENT_TIME_THRESHOLD = 3  # segundos (reduzido de 5 para 3)
+        self.MOVEMENT_THRESHOLD = 0.2  # limite para considerar "parado" (aumentado de 0.1 para 0.2)
         
         # Constantes para satisfação
         self.RESP_RATE_NORMAL_MIN = 6
@@ -479,67 +484,42 @@ class AnalyticsManager:
     def calculate_engagement(self, records):
         """
         Calcula engajamento baseado no histórico de registros
-        Retorna True se pessoa ficou parada por mais de 5 segundos
+        Retorna True se pessoa ficou parada por mais de 3 segundos
         """
         if not records or len(records) < 2:
+            logger.info("Não há registros suficientes para calcular engajamento")
             return False
             
         # Filtrar registros válidos
         valid_records = []
         for record in records:
-            if (record.get('move_speed') is not None and 
-                record.get('timestamp') is not None):
+            if (record.get('move_speed') is not None):
                 valid_records.append(record)
         
         if len(valid_records) < 2:
+            logger.info("Não há registros válidos suficientes para calcular engajamento")
             return False
             
-        # Organizar registros por timestamp
-        try:
-            # Tentar ordenar por timestamp
-            sorted_records = sorted(valid_records, key=lambda x: x['timestamp'])
-        except (TypeError, ValueError):
-            logger.error("Erro ao ordenar registros por timestamp")
-            return False
-        
-        # Verificar sequência de registros "parados"
-        start_time = None
-        for record in sorted_records:
+        # Verificar se há registros recentes com movimento baixo
+        paused_records = 0
+        for record in valid_records:
             try:
                 move_speed = float(record.get('move_speed', 999))
+                logger.info(f"Verificando engajamento: move_speed = {move_speed}")
                 
                 if move_speed <= self.MOVEMENT_THRESHOLD:
-                    # Pessoa está parada
-                    timestamp = record.get('timestamp')
+                    paused_records += 1
+                    logger.info(f"Registro com movimento baixo detectado: {move_speed} <= {self.MOVEMENT_THRESHOLD}")
                     
-                    # Converter timestamp para datetime se for string
-                    current_time = None
-                    if isinstance(timestamp, str):
-                        try:
-                            current_time = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
-                        except ValueError:
-                            logger.error(f"Formato de timestamp inválido: {timestamp}")
-                            continue
-                    elif isinstance(timestamp, datetime):
-                        current_time = timestamp
-                    else:
-                        logger.error(f"Tipo de timestamp não suportado: {type(timestamp)}")
-                        continue
-                    
-                    if start_time is None:
-                        start_time = current_time
-                    else:
-                        duration = (current_time - start_time).total_seconds()
-                        logger.info(f"Duração parado: {duration} segundos")
-                        if duration >= self.ENGAGEMENT_TIME_THRESHOLD:
-                            return True
-                else:
-                    # Pessoa está se movendo
-                    start_time = None
+                    # Se tivermos pelo menos 3 registros com movimento baixo, consideramos engajado
+                    if paused_records >= 2:
+                        logger.info(f"Engajamento detectado! {paused_records} registros com movimento baixo")
+                        return True
             except Exception as e:
                 logger.error(f"Erro ao processar registro para engajamento: {str(e)}")
                 continue
                 
+        logger.info(f"Engajamento não detectado. Apenas {paused_records} registros com movimento baixo")
         return False
         
     def calculate_satisfaction(self, heart_rate, breath_rate):
@@ -597,10 +577,10 @@ analytics_manager = AnalyticsManager()
 class UserSessionManager:
     def __init__(self):
         # Constantes para detecção de entrada/saída
-        self.PRESENCE_THRESHOLD = 1.5  # Distância máxima para considerar presença (metros)
-        self.MOVEMENT_THRESHOLD = 0.3  # Movimento máximo para considerar "parado"
+        self.PRESENCE_THRESHOLD = 2.0  # Distância máxima para considerar presença (metros) - aumentado de 1.5 para 2.0
+        self.MOVEMENT_THRESHOLD = 0.5  # Movimento máximo para considerar "parado" - aumentado de 0.3 para 0.5
         self.ABSENCE_THRESHOLD = 3.0   # Distância mínima para considerar ausência (metros)
-        self.TIME_THRESHOLD = 3        # Tempo mínimo (segundos) para considerar uma nova sessão
+        self.TIME_THRESHOLD = 2        # Tempo mínimo (segundos) para considerar uma nova sessão - reduzido de 3 para 2
         
         # Estado atual
         self.current_session_id = None
@@ -611,6 +591,7 @@ class UserSessionManager:
         self.last_position = (None, None)
         self.last_distance = None
         self.is_present = False
+        self.consecutive_presence_count = 0  # Contador de presenças consecutivas
         
     def detect_session(self, data, timestamp=None):
         """
@@ -625,7 +606,12 @@ class UserSessionManager:
         x_point = data.get('x_point')
         y_point = data.get('y_point')
         move_speed = data.get('move_speed', 999)
+        
+        # Calcular distância do centro (0,0)
         distance = np.sqrt(x_point**2 + y_point**2) if x_point is not None and y_point is not None else None
+        
+        # Log para debug
+        logger.info(f"Detecção de sessão: x={x_point}, y={y_point}, move_speed={move_speed}, distância={distance}")
         
         # Inicializar evento como None (sem evento)
         event_type = None
@@ -639,78 +625,87 @@ class UserSessionManager:
         
         # Pessoa está presente se estiver próxima e com movimento limitado
         if distance <= self.PRESENCE_THRESHOLD:
-            self.is_present = True
-            self.last_presence_time = timestamp
+            self.consecutive_presence_count += 1
+            logger.info(f"Presença detectada! Contagem: {self.consecutive_presence_count}")
             
-            # Se não havia sessão, iniciar uma nova
-            if self.current_session_id is None:
-                self.current_session_id = str(uuid.uuid4())
-                self.session_start_time = timestamp
-                self.session_data = {
-                    'session_id': self.current_session_id,
-                    'start_time': timestamp,
-                    'heart_rates': [],
-                    'breath_rates': [],
-                    'positions': [],
-                    'move_speeds': [],
-                    'satisfaction_scores': [],
-                    'is_engaged': False
-                }
-                event_type = 'start'
-                logger.info(f"🟢 Nova sessão iniciada: {self.current_session_id}")
-            else:
-                event_type = 'update'
+            # Só consideramos presente após 2 detecções consecutivas
+            if self.consecutive_presence_count >= 2:
+                self.is_present = True
+                self.last_presence_time = timestamp
                 
-            # Atualizar dados da sessão
-            if data.get('heart_rate') is not None:
-                self.session_data['heart_rates'].append(data.get('heart_rate'))
-            if data.get('breath_rate') is not None:
-                self.session_data['breath_rates'].append(data.get('breath_rate'))
-            if data.get('satisfaction_score') is not None:
-                self.session_data['satisfaction_scores'].append(data.get('satisfaction_score'))
-            
-            self.session_data['positions'].append((x_point, y_point))
-            self.session_data['move_speeds'].append(move_speed)
-            
-            if data.get('is_engaged') is True:
-                self.session_data['is_engaged'] = True
+                # Se não havia sessão, iniciar uma nova
+                if self.current_session_id is None:
+                    self.current_session_id = str(uuid.uuid4())
+                    self.session_start_time = timestamp
+                    self.session_data = {
+                        'session_id': self.current_session_id,
+                        'start_time': timestamp,
+                        'heart_rates': [],
+                        'breath_rates': [],
+                        'positions': [],
+                        'move_speeds': [],
+                        'satisfaction_scores': [],
+                        'is_engaged': False
+                    }
+                    event_type = 'start'
+                    logger.info(f"🟢 Nova sessão iniciada: {self.current_session_id}")
+                else:
+                    event_type = 'update'
+                    
+                # Atualizar dados da sessão
+                if data.get('heart_rate') is not None:
+                    self.session_data['heart_rates'].append(data.get('heart_rate'))
+                if data.get('breath_rate') is not None:
+                    self.session_data['breath_rates'].append(data.get('breath_rate'))
+                if data.get('satisfaction_score') is not None:
+                    self.session_data['satisfaction_scores'].append(data.get('satisfaction_score'))
                 
-        # Pessoa está ausente se estiver longe
-        elif distance >= self.ABSENCE_THRESHOLD:
-            self.is_present = False
-            self.last_absence_time = timestamp
-            
-            # Se havia uma sessão ativa, finalizá-la
-            if was_present and self.current_session_id is not None:
-                # Calcular métricas finais da sessão
-                session_duration = (timestamp - self.session_start_time).total_seconds()
+                self.session_data['positions'].append((x_point, y_point))
+                self.session_data['move_speeds'].append(move_speed)
                 
-                # Só considerar sessão válida se durou mais que o tempo mínimo
-                if session_duration >= self.TIME_THRESHOLD:
-                    # Calcular médias
-                    avg_heart_rate = np.mean(self.session_data['heart_rates']) if self.session_data['heart_rates'] else None
-                    avg_breath_rate = np.mean(self.session_data['breath_rates']) if self.session_data['breath_rates'] else None
-                    avg_satisfaction = np.mean(self.session_data['satisfaction_scores']) if self.session_data['satisfaction_scores'] else None
+                # Verificar engajamento baseado no movimento
+                if move_speed <= self.MOVEMENT_THRESHOLD:
+                    logger.info(f"Movimento baixo detectado: {move_speed} <= {self.MOVEMENT_THRESHOLD}")
+                    self.session_data['is_engaged'] = True
+        else:
+            self.consecutive_presence_count = 0
+            
+            # Pessoa está ausente se estiver longe
+            if distance >= self.ABSENCE_THRESHOLD:
+                self.is_present = False
+                self.last_absence_time = timestamp
+                
+                # Se havia uma sessão ativa, finalizá-la
+                if was_present and self.current_session_id is not None:
+                    # Calcular métricas finais da sessão
+                    session_duration = (timestamp - self.session_start_time).total_seconds()
                     
-                    # Adicionar métricas finais
-                    self.session_data['end_time'] = timestamp
-                    self.session_data['duration'] = session_duration
-                    self.session_data['avg_heart_rate'] = avg_heart_rate
-                    self.session_data['avg_breath_rate'] = avg_breath_rate
-                    self.session_data['avg_satisfaction'] = avg_satisfaction
-                    
-                    event_type = 'end'
-                    logger.info(f"🔴 Sessão finalizada: {self.current_session_id}, duração: {session_duration:.2f}s")
-                    
-                    # Guardar dados da sessão antes de resetar
-                    session_data_copy = self.session_data.copy()
-                    
-                    # Resetar sessão
-                    self.current_session_id = None
-                    self.session_start_time = None
-                    self.session_data = {}
-                    
-                    return session_data_copy['session_id'], event_type, session_data_copy
+                    # Só considerar sessão válida se durou mais que o tempo mínimo
+                    if session_duration >= self.TIME_THRESHOLD:
+                        # Calcular médias
+                        avg_heart_rate = np.mean(self.session_data['heart_rates']) if self.session_data['heart_rates'] else None
+                        avg_breath_rate = np.mean(self.session_data['breath_rates']) if self.session_data['breath_rates'] else None
+                        avg_satisfaction = np.mean(self.session_data['satisfaction_scores']) if self.session_data['satisfaction_scores'] else None
+                        
+                        # Adicionar métricas finais
+                        self.session_data['end_time'] = timestamp
+                        self.session_data['duration'] = session_duration
+                        self.session_data['avg_heart_rate'] = avg_heart_rate
+                        self.session_data['avg_breath_rate'] = avg_breath_rate
+                        self.session_data['avg_satisfaction'] = avg_satisfaction
+                        
+                        event_type = 'end'
+                        logger.info(f"🔴 Sessão finalizada: {self.current_session_id}, duração: {session_duration:.2f}s")
+                        
+                        # Guardar dados da sessão antes de resetar
+                        session_data_copy = self.session_data.copy()
+                        
+                        # Resetar sessão
+                        self.current_session_id = None
+                        self.session_start_time = None
+                        self.session_data = {}
+                        
+                        return session_data_copy['session_id'], event_type, session_data_copy
         
         # Atualizar última posição e distância
         self.last_position = (x_point, y_point)
@@ -725,6 +720,7 @@ user_session_manager = UserSessionManager()
 def receive_radar_data():
     """Endpoint para receber dados do radar"""
     try:
+        logger.info("="*50)
         logger.info("📡 Requisição POST recebida em /radar/data")
         logger.info(f"Headers: {request.headers}")
         
@@ -791,10 +787,33 @@ def receive_radar_data():
         
         # Verificar engajamento se houver dados suficientes
         try:
-            last_records = db_manager.get_last_records(10)  # Últimos 10 registros para análise
-            if last_records:
-                is_engaged = analytics_manager.calculate_engagement(last_records)
-                analytics_data["engaged"] = is_engaged
+            # Obter últimos registros para análise
+            last_records = db_manager.get_last_records(10)
+            
+            # Adicionar o registro atual aos últimos registros para análise
+            current_record = {
+                'x_point': converted_data.get('x_point'),
+                'y_point': converted_data.get('y_point'),
+                'move_speed': converted_data.get('move_speed'),
+                'heart_rate': converted_data.get('heart_rate'),
+                'breath_rate': converted_data.get('breath_rate'),
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            
+            # Adicionar o registro atual à lista para análise
+            analysis_records = [current_record] + last_records if last_records else [current_record]
+            
+            # Calcular engajamento com os registros combinados
+            is_engaged = analytics_manager.calculate_engagement(analysis_records)
+            analytics_data["engaged"] = is_engaged
+            
+            logger.info(f"Resultado do cálculo de engajamento: {is_engaged}")
+            
+            # Se o movimento for baixo, considerar engajado diretamente
+            if converted_data.get('move_speed') is not None and float(converted_data.get('move_speed')) <= analytics_manager.MOVEMENT_THRESHOLD:
+                logger.info(f"Engajamento direto detectado! move_speed = {converted_data.get('move_speed')} <= {analytics_manager.MOVEMENT_THRESHOLD}")
+                analytics_data["engaged"] = True
+                
         except Exception as e:
             logger.error(f"❌ Erro ao calcular engajamento: {str(e)}")
             logger.error(traceback.format_exc())
@@ -851,6 +870,7 @@ def receive_radar_data():
             }
         }
         
+        logger.info("="*50)
         return jsonify(response_data)
 
     except Exception as e:
