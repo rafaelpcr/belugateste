@@ -470,7 +470,7 @@ class AnalyticsManager:
     def __init__(self):
         # Constantes para engajamento
         self.ENGAGEMENT_TIME_THRESHOLD = 3  # segundos (reduzido de 5 para 3)
-        self.MOVEMENT_THRESHOLD = 0.2  # limite para considerar "parado" (aumentado de 0.1 para 0.2)
+        self.MOVEMENT_THRESHOLD = 20.0  # limite para considerar "parado" em cm/s (era 0.2 m/s, agora 20 cm/s)
         
         # Constantes para satisfação
         self.RESP_RATE_NORMAL_MIN = 6
@@ -485,6 +485,7 @@ class AnalyticsManager:
         """
         Calcula engajamento baseado no histórico de registros
         Retorna True se pessoa ficou parada por mais de 3 segundos
+        move_speed está em cm/s
         """
         if not records or len(records) < 2:
             logger.info("Não há registros suficientes para calcular engajamento")
@@ -505,11 +506,11 @@ class AnalyticsManager:
         for record in valid_records:
             try:
                 move_speed = float(record.get('move_speed', 999))
-                logger.info(f"Verificando engajamento: move_speed = {move_speed}")
+                logger.info(f"Verificando engajamento: move_speed = {move_speed} cm/s")
                 
                 if move_speed <= self.MOVEMENT_THRESHOLD:
                     paused_records += 1
-                    logger.info(f"Registro com movimento baixo detectado: {move_speed} <= {self.MOVEMENT_THRESHOLD}")
+                    logger.info(f"Registro com movimento baixo detectado: {move_speed} cm/s <= {self.MOVEMENT_THRESHOLD} cm/s")
                     
                     # Se tivermos pelo menos 3 registros com movimento baixo, consideramos engajado
                     if paused_records >= 2:
@@ -577,10 +578,10 @@ analytics_manager = AnalyticsManager()
 class UserSessionManager:
     def __init__(self):
         # Constantes para detecção de entrada/saída
-        self.PRESENCE_THRESHOLD = 2.0  # Distância máxima para considerar presença (metros) - aumentado de 1.5 para 2.0
-        self.MOVEMENT_THRESHOLD = 0.5  # Movimento máximo para considerar "parado" - aumentado de 0.3 para 0.5
+        self.PRESENCE_THRESHOLD = 2.0  # Distância máxima para considerar presença (metros)
+        self.MOVEMENT_THRESHOLD = 50.0  # Movimento máximo para considerar "parado" em cm/s (era 0.5 m/s, agora 50 cm/s)
         self.ABSENCE_THRESHOLD = 3.0   # Distância mínima para considerar ausência (metros)
-        self.TIME_THRESHOLD = 2        # Tempo mínimo (segundos) para considerar uma nova sessão - reduzido de 3 para 2
+        self.TIME_THRESHOLD = 2        # Tempo mínimo (segundos) para considerar uma nova sessão
         
         # Estado atual
         self.current_session_id = None
@@ -611,7 +612,7 @@ class UserSessionManager:
         distance = np.sqrt(x_point**2 + y_point**2) if x_point is not None and y_point is not None else None
         
         # Log para debug
-        logger.info(f"Detecção de sessão: x={x_point}, y={y_point}, move_speed={move_speed}, distância={distance}")
+        logger.info(f"Detecção de sessão: x={x_point}, y={y_point}, move_speed={move_speed} cm/s, distância={distance} m")
         
         # Inicializar evento como None (sem evento)
         event_type = None
@@ -665,7 +666,7 @@ class UserSessionManager:
                 
                 # Verificar engajamento baseado no movimento
                 if move_speed <= self.MOVEMENT_THRESHOLD:
-                    logger.info(f"Movimento baixo detectado: {move_speed} <= {self.MOVEMENT_THRESHOLD}")
+                    logger.info(f"Movimento baixo detectado: {move_speed} cm/s <= {self.MOVEMENT_THRESHOLD} cm/s")
                     self.session_data['is_engaged'] = True
         else:
             self.consecutive_presence_count = 0
@@ -811,7 +812,7 @@ def receive_radar_data():
             
             # Se o movimento for baixo, considerar engajado diretamente
             if converted_data.get('move_speed') is not None and float(converted_data.get('move_speed')) <= analytics_manager.MOVEMENT_THRESHOLD:
-                logger.info(f"Engajamento direto detectado! move_speed = {converted_data.get('move_speed')} <= {analytics_manager.MOVEMENT_THRESHOLD}")
+                logger.info(f"Engajamento direto detectado! move_speed = {converted_data.get('move_speed')} cm/s <= {analytics_manager.MOVEMENT_THRESHOLD} cm/s")
                 analytics_data["engaged"] = True
                 
         except Exception as e:
