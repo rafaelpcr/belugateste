@@ -668,37 +668,40 @@ class AnalyticsManager:
             logger.info("Não há registros suficientes para calcular engajamento")
             return 0, 0  # Não detectado, duração 0
             
-        # Filtrar registros válidos
+        # Filtrar registros válidos (com move_speed e timestamp)
         valid_records = []
+        current_time = datetime.now()
+        
         for record in records:
-            if (record.get('move_speed') is not None):
-                valid_records.append(record)
+            if (record.get('move_speed') is not None and 
+                record.get('timestamp') is not None):
+                try:
+                    # Tentar converter o timestamp para datetime
+                    record_time = datetime.strptime(record['timestamp'], '%Y-%m-%d %H:%M:%S')
+                    valid_records.append({
+                        'move_speed': float(record['move_speed']),
+                        'timestamp': record_time
+                    })
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Erro ao processar timestamp do registro: {str(e)}")
+                    continue
         
         if len(valid_records) < 2:
             logger.info("Não há registros válidos suficientes para calcular engajamento")
             return 0, 0  # Não detectado, duração 0
         
         # Ordenar registros por timestamp (mais recente primeiro)
-        try:
-            valid_records = sorted(valid_records, 
-                                  key=lambda x: datetime.strptime(x.get('timestamp', '2000-01-01 00:00:00'), 
-                                                                '%Y-%m-%d %H:%M:%S'),
-                                  reverse=True)
-        except Exception as e:
-            logger.error(f"Erro ao ordenar registros por timestamp: {str(e)}")
-            # Continuar mesmo sem ordenação
-            
+        valid_records.sort(key=lambda x: x['timestamp'], reverse=True)
+        
         # Verificar se há registros recentes com movimento baixo
         paused_records = 0
-        current_time = datetime.now()
         first_paused_time = None
         last_paused_time = None
         
         for record in valid_records:
             try:
-                move_speed = float(record.get('move_speed', 999))
-                record_time = datetime.strptime(record.get('timestamp', current_time.strftime('%Y-%m-%d %H:%M:%S')), 
-                                              '%Y-%m-%d %H:%M:%S')
+                move_speed = record['move_speed']
+                record_time = record['timestamp']
                 
                 logger.info(f"Verificando engajamento: move_speed = {move_speed} cm/s, time = {record_time}")
                 
