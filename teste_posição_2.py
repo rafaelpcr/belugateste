@@ -240,9 +240,10 @@ class DatabaseManager:
                     "use_pure": True,
                     "ssl_disabled": True,
                     "auth_plugin": "mysql_native_password",
-                    "connect_timeout": 60,
-                    "pool_name": "radar_pool",
-                    "pool_size": 5
+                    "connect_timeout": 120,
+                    "pool_size": 3,
+                    "charset": "utf8mb4",
+                    "collation": "utf8mb4_unicode_ci"
                 }
                 self.conn = mysql.connector.connect(**db_config)
                 self.cursor = self.conn.cursor(dictionary=True)
@@ -643,6 +644,28 @@ class DatabaseManager:
                 if field not in data:
                     logger.error(f"Campo obrigatório ausente: {field}")
                     return False
+            
+            # Garantir valores padrão para campos que podem estar ausentes
+            if 'satisfaction_score' not in data or data['satisfaction_score'] is None:
+                data['satisfaction_score'] = 0.0
+                
+            if 'satisfaction_class' not in data or data['satisfaction_class'] is None:
+                data['satisfaction_class'] = 'NEUTRA'
+                
+            if 'is_engaged' not in data or data['is_engaged'] is None:
+                data['is_engaged'] = False
+                
+            if 'engagement_duration' not in data or data['engagement_duration'] is None:
+                data['engagement_duration'] = 0
+                
+            if 'session_id' not in data or data['session_id'] is None:
+                data['session_id'] = None
+                
+            if 'section_id' not in data or data['section_id'] is None:
+                data['section_id'] = None
+                
+            if 'product_id' not in data or data['product_id'] is None:
+                data['product_id'] = None
             
             # Query de inserção
             query = """
@@ -1104,9 +1127,73 @@ def receive_radar_data():
             converted_data['product_id'] = section['product_id']
             logger.info(f"Pessoa detectada na seção: {section['section_name']} (Produto: {section['product_name']})")
         else:
-            converted_data['section_id'] = None
-            converted_data['product_id'] = None
-            logger.info("Pessoa detectada fora de qualquer seção")
+            # Ponto está fora de qualquer seção, vamos ajustar para a seção mais próxima
+            logger.info(f"Ponto original ({converted_data['x_point']}, {converted_data['y_point']}) está fora de qualquer seção. Ajustando...")
+            
+            # Buscar todas as seções
+            all_sections = shelf_manager.get_all_sections(db_manager)
+            closest_section = None
+            min_distance = float('inf')
+            
+            # Encontrar a seção mais próxima
+            for section_item in all_sections:
+                # Calcular o centro da seção
+                section_center_x = (section_item['x_start'] + section_item['x_end']) / 2
+                section_center_y = (section_item['y_start'] + section_item['y_end']) / 2
+                
+                # Calcular distância do ponto ao centro da seção
+                distance = ((converted_data['x_point'] - section_center_x) ** 2 + 
+                           (converted_data['y_point'] - section_center_y) ** 2) ** 0.5
+                
+                # Verificar se é a seção mais próxima
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_section = section_item
+            
+            if closest_section:
+                # Associar à seção mais próxima sem alterar coordenadas
+                logger.info(f"Associando à seção mais próxima: {closest_section['section_name']}")
+                
+                converted_data['section_id'] = closest_section['id']
+                converted_data['product_id'] = closest_section['product_id']
+                
+                logger.info(f"Pessoa associada à seção: {closest_section['section_name']} (Produto: {closest_section['product_name']})")
+            else:
+                logger.warning("Não foi possível encontrar uma seção próxima")
+                converted_data['section_id'] = None
+                converted_data['product_id'] = None
+        
+        # Calcular sessão e engajamento
+        session_id, event_type, session_data = user_session_manager.detect_session(converted_data)
+        converted_data['session_id'] = session_id
+        
+        # Salvar resumo da sessão se for final de sessão
+        if event_type == 'end' and session_data:
+            try:
+                db_manager.save_session_summary(session_data)
+            except Exception as e:
+                logger.error(f"Erro ao salvar resumo da sessão: {str(e)}")
+        
+        # Obter últimos 5 registros para calcular engajamento
+        last_records = db_manager.get_last_records(5)
+        
+        # Calcular engajamento baseado nos últimos registros
+        engagement_level, engagement_duration = analytics_manager.calculate_engagement(last_records)
+        converted_data['is_engaged'] = bool(engagement_level)  # 0=não, 1=inicial, 2=completo -> converte para boolean
+        converted_data['engagement_duration'] = int(engagement_duration)
+        
+        # Calcular satisfação
+        satisfaction_data = analytics_manager.calculate_satisfaction(
+            converted_data.get('heart_rate'), 
+            converted_data.get('breath_rate')
+        )
+        
+        converted_data['satisfaction_score'] = satisfaction_data['score']
+        converted_data['satisfaction_class'] = satisfaction_data['classification']
+        
+        # Log dos dados calculados
+        logger.info(f"Dados de engajamento: nível={engagement_level}, duração={engagement_duration}s")
+        logger.info(f"Dados de satisfação: score={satisfaction_data['score']}, class={satisfaction_data['classification']}")
         
         # Inserir dados no banco
         success = db_manager.insert_radar_data(converted_data)
@@ -1139,19 +1226,46 @@ def get_status():
         status = {
             "server": "online",
             "database": "offline",
-            "last_records": None
+            "last_records": None,
+            "connection_info": {}
         }
 
-        if db_manager and db_manager.conn and db_manager.conn.is_connected():
-            status["database"] = "online"
-            status["last_records"] = db_manager.get_last_records(5)
+        try:
+            # Verificar conexão
+            if db_manager and db_manager.conn:
+                is_connected = db_manager.conn.is_connected()
+                status["connection_info"]["is_connected"] = is_connected
+                
+                if is_connected:
+                    status["database"] = "online"
+                    status["last_records"] = db_manager.get_last_records(5)
+                    
+                    # Obter informações do servidor
+                    try:
+                        cursor = db_manager.conn.cursor(dictionary=True)
+                        cursor.execute("SELECT VERSION() as version")
+                        version = cursor.fetchone()
+                        cursor.close()
+                        
+                        if version:
+                            status["connection_info"]["version"] = version["version"]
+                    except Exception as e:
+                        status["connection_info"]["version_error"] = str(e)
+                else:
+                    status["connection_info"]["connection_error"] = "Connection object exists but is not connected"
+            else:
+                status["connection_info"]["error"] = "Database manager or connection object is None"
+        except Exception as e:
+            status["connection_info"]["exception"] = str(e)
 
         return jsonify(status)
     except Exception as e:
         logger.error(f"Erro ao verificar status: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             "status": "error",
-            "message": str(e)
+            "message": str(e),
+            "traceback": traceback.format_exc()
         }), 500
 
 @app.route('/radar/sessions', methods=['GET'])
