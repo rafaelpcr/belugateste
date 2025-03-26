@@ -231,15 +231,20 @@ class DatabaseManager:
                         pass
                 
                 # Usando driver puro Python e configurações SSL mais simples
-                self.conn = mysql.connector.connect(
-                    host="168.75.89.11",
-                    user="belugaDB",
-                    password="Rpcr@300476",
-                    database="Beluga_Analytics",
-                    port=3306,
-                    use_pure=True,  # Força o uso do driver puro Python
-                    ssl_disabled=True  # Desabilita SSL temporariamente
-                )
+                db_config = {
+                    "host": os.getenv("DB_HOST", "168.75.89.11"),
+                    "user": os.getenv("DB_USER", "belugaDB"),
+                    "password": os.getenv("DB_PASSWORD", "Rpcr@300476"),
+                    "database": os.getenv("DB_NAME", "Beluga_Analytics"),
+                    "port": int(os.getenv("DB_PORT", 3306)),
+                    "use_pure": True,
+                    "ssl_disabled": True,
+                    "auth_plugin": "mysql_native_password",
+                    "connect_timeout": 60,
+                    "pool_name": "radar_pool",
+                    "pool_size": 5
+                }
+                self.conn = mysql.connector.connect(**db_config)
                 self.cursor = self.conn.cursor(dictionary=True)
                 
                 # Testar conexão
