@@ -389,7 +389,26 @@ class DatabaseManager:
     def initialize_database(self):
         """Inicializa o banco de dados"""
         try:
-            # Verificar se a tabela existe
+            # Verificar/criar tabela de dispositivos primeiro
+            logger.info("Verificando tabela de dispositivos...")
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS Dispositivos (
+                    serial_number VARCHAR(50) PRIMARY KEY,
+                    nome VARCHAR(100),
+                    tipo VARCHAR(50),
+                    status VARCHAR(20) DEFAULT 'ATIVO',
+                    data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Inserir dispositivo padrão se não existir
+            logger.info("Verificando dispositivo padrão...")
+            self.cursor.execute("""
+                INSERT IGNORE INTO Dispositivos (serial_number, nome, tipo)
+                VALUES ('RADAR_1', 'Radar Principal', 'RADAR')
+            """)
+            
+            # Verificar se a tabela radar_dados existe
             self.cursor.execute("SHOW TABLES LIKE 'radar_dados'")
             table_exists = self.cursor.fetchone()
             
@@ -412,7 +431,8 @@ class DatabaseManager:
                         section_id INT,
                         product_id VARCHAR(50),
                         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        serial_number VARCHAR(50) DEFAULT 'RADAR_1'
+                        serial_number VARCHAR(50),
+                        FOREIGN KEY (serial_number) REFERENCES Dispositivos(serial_number)
                     )
                 """)
                 logger.info("Tabela radar_dados criada com sucesso!")
@@ -427,7 +447,8 @@ class DatabaseManager:
                     # Adicionar coluna com valor padrão
                     self.cursor.execute("""
                         ALTER TABLE radar_dados 
-                        ADD COLUMN serial_number VARCHAR(50) DEFAULT 'RADAR_1'
+                        ADD COLUMN serial_number VARCHAR(50),
+                        ADD FOREIGN KEY (serial_number) REFERENCES Dispositivos(serial_number)
                     """)
                     # Atualizar registros existentes
                     self.cursor.execute("""
@@ -478,6 +499,36 @@ class DatabaseManager:
             logger.error(traceback.format_exc())
             raise
 
+    def ensure_device_exists(self, serial_number, nome=None, tipo=None):
+        """Garante que o dispositivo existe no banco"""
+        try:
+            # Verificar se o dispositivo já existe
+            self.cursor.execute("""
+                SELECT serial_number FROM Dispositivos
+                WHERE serial_number = %s
+            """, (serial_number,))
+            
+            device = self.cursor.fetchone()
+            
+            if not device:
+                # Inserir novo dispositivo
+                logger.info(f"Inserindo novo dispositivo: {serial_number}")
+                self.cursor.execute("""
+                    INSERT INTO Dispositivos (serial_number, nome, tipo)
+                    VALUES (%s, %s, %s)
+                """, (
+                    serial_number,
+                    nome or f"Radar {serial_number}",
+                    tipo or "RADAR"
+                ))
+                self.conn.commit()
+                logger.info(f"✅ Dispositivo {serial_number} inserido com sucesso!")
+            
+            return True
+        except Exception as e:
+            logger.error(f"❌ Erro ao verificar/inserir dispositivo: {str(e)}")
+            return False
+
     def insert_data(self, data, analytics_data=None):
         """Insere dados no banco"""
         try:
@@ -488,6 +539,11 @@ class DatabaseManager:
             if not self.conn or not self.conn.is_connected():
                 logger.info("Conexão não disponível, tentando reconectar...")
                 self.connect_with_retry()
+            
+            # Garantir que o dispositivo existe
+            serial_number = data.get('serial_number', 'RADAR_1')
+            if not self.ensure_device_exists(serial_number):
+                return False
             
             # Valores padrão para analytics
             satisfaction_score = None
@@ -512,8 +568,9 @@ class DatabaseManager:
             query = """
                 INSERT INTO radar_dados
                 (x_point, y_point, move_speed, heart_rate, breath_rate, 
-                 satisfaction_score, satisfaction_class, is_engaged, engagement_duration, session_id, section_id, product_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 satisfaction_score, satisfaction_class, is_engaged, engagement_duration, 
+                 session_id, section_id, product_id, serial_number)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             
             # Preparar parâmetros
@@ -529,7 +586,8 @@ class DatabaseManager:
                 engagement_duration,
                 data.get('session_id'),
                 data.get('section_id'),
-                data.get('product_id')
+                data.get('product_id'),
+                serial_number
             )
             
             logger.info(f"Query SQL: {query}")
@@ -543,33 +601,9 @@ class DatabaseManager:
             logger.info("="*50)
             return True
             
-        except mysql.connector.Error as e:
-            logger.error("="*50)
-            logger.error(f"❌ Erro MySQL ao inserir dados: {str(e)}")
-            logger.error(f"Código do erro: {e.errno}")
-            logger.error(f"Mensagem SQL State: {e.sqlstate}")
-            logger.error(f"Mensagem completa: {e.msg}")
-            logger.error(f"Dados que tentamos inserir: {data}")
-            logger.error(f"Analytics: {analytics_data}")
-            logger.error("="*50)
-            
-            if self.conn:
-                try:
-                    self.conn.rollback()
-                    logger.info("Rollback realizado com sucesso")
-                except Exception as rollback_error:
-                    logger.error(f"Erro ao fazer rollback: {str(rollback_error)}")
-            
-            # Tentar reconectar em caso de erro de conexão
-            if e.errno in [2006, 2013, 2055]:  # Códigos de erro de conexão
-                logger.info("Tentando reconectar após erro de conexão...")
-                self.connect_with_retry()
-            
-            raise
-            
         except Exception as e:
             logger.error("="*50)
-            logger.error(f"❌ Erro genérico ao inserir dados: {str(e)}")
+            logger.error(f"❌ Erro ao inserir dados: {str(e)}")
             logger.error(f"Stack trace: {traceback.format_exc()}")
             logger.error(f"Dados que tentamos inserir: {data}")
             logger.error(f"Analytics: {analytics_data}")
