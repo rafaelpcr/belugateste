@@ -1000,8 +1000,13 @@ class AnalyticsManager:
         # Constantes para validação
         HEART_RATE_MIN = 60
         HEART_RATE_MAX = 100
+        HEART_RATE_IDEAL_MIN = 65
+        HEART_RATE_IDEAL_MAX = 75
+        
         BREATH_RATE_MIN = 12
         BREATH_RATE_MAX = 20
+        BREATH_RATE_IDEAL_MIN = 12
+        BREATH_RATE_IDEAL_MAX = 16
         
         # Inicializar scores
         heart_score = 0
@@ -1011,26 +1016,37 @@ class AnalyticsManager:
         # Validar e calcular score de batimentos cardíacos
         if heart_rate is not None and HEART_RATE_MIN <= heart_rate <= HEART_RATE_MAX:
             valid_data = True
-            if 60 <= heart_rate <= 100:
+            
+            # Cálculo mais granular para heart_rate
+            if HEART_RATE_IDEAL_MIN <= heart_rate <= HEART_RATE_IDEAL_MAX:
+                # Score máximo para faixa ideal
                 heart_score = 100
-            elif heart_rate > 100:
-                # Penalidade progressiva para batimentos acima de 100
-                heart_score = max(0, 100 - ((heart_rate - 100) / 20) * 100)
-            else:
-                # Penalidade progressiva para batimentos abaixo de 60
-                heart_score = max(0, (heart_rate / 60) * 100)
+            elif heart_rate < HEART_RATE_IDEAL_MIN:
+                # Penalidade progressiva abaixo do ideal
+                heart_score = 100 - ((HEART_RATE_IDEAL_MIN - heart_rate) / 5) * 20
+            else:  # heart_rate > HEART_RATE_IDEAL_MAX
+                # Penalidade progressiva acima do ideal
+                heart_score = 100 - ((heart_rate - HEART_RATE_IDEAL_MAX) / 5) * 20
+            
+            # Garantir que o score está entre 0 e 100
+            heart_score = max(0, min(100, heart_score))
         
         # Validar e calcular score de respiração
         if breath_rate is not None and BREATH_RATE_MIN <= breath_rate <= BREATH_RATE_MAX:
             valid_data = True
-            if 12 <= breath_rate <= 20:
+            
+            # Cálculo mais granular para breath_rate
+            if BREATH_RATE_IDEAL_MIN <= breath_rate <= BREATH_RATE_IDEAL_MAX:
+                # Score máximo para faixa ideal
                 resp_score = 100
-            elif breath_rate > 20:
-                # Penalidade progressiva para respiração acima de 20
-                resp_score = max(0, 100 - ((breath_rate - 20) / 10) * 100)
-            else:
-                # Penalidade progressiva para respiração abaixo de 12
-                resp_score = max(0, (breath_rate / 12) * 100)
+            elif breath_rate > BREATH_RATE_IDEAL_MAX:
+                # Penalidade progressiva acima do ideal
+                resp_score = 100 - ((breath_rate - BREATH_RATE_IDEAL_MAX) / 2) * 25
+            else:  # Não deve acontecer pois BREATH_RATE_IDEAL_MIN = BREATH_RATE_MIN
+                resp_score = 100
+            
+            # Garantir que o score está entre 0 e 100
+            resp_score = max(0, min(100, resp_score))
         
         # Se não houver dados válidos, retornar score neutro
         if not valid_data:
