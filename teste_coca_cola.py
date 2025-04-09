@@ -41,7 +41,7 @@ def convert_radar_data(raw_data):
         COORD_MIN = -2  # -2 metros
         COORD_MAX = 2   # 2 metros
         HEART_BREATH_RATIO_MIN = 3.0
-        HEART_BREATH_RATIO_MAX = 5.0
+        HEART_BREATH_RATIO_MAX = 6.0  # Aumentado para 6.0 para ser mais flexível
         
         # Processar e validar coordenadas
         try:
@@ -62,31 +62,23 @@ def convert_radar_data(raw_data):
             logger.error(f"Erro ao converter coordenadas: {str(e)}")
             x_point = 0
             y_point = 0
-        
+            
         # Processar e validar move_speed
         try:
             move_speed = float(raw_data.get('move_speed', 0))
             
-            # Validar faixa de valores
-            if move_speed < MOVE_SPEED_MIN:
-                logger.warning(f"Move speed negativo detectado: {move_speed}, ajustando para 0")
-                move_speed = 0
+            # Validar valores absurdos
+            if move_speed < 0:
+                logger.warning(f"Move speed negativo: {move_speed}, convertendo para positivo")
+                move_speed = abs(move_speed)
             elif move_speed > MOVE_SPEED_MAX:
-                logger.warning(f"Move speed muito alto detectado: {move_speed}, ajustando para máximo")
+                logger.warning(f"Move speed muito alto: {move_speed}, limitando a {MOVE_SPEED_MAX}")
                 move_speed = MOVE_SPEED_MAX
-            
-            # Aplicar suavização para valores muito baixos e arredondar
-            if 0 < move_speed < 5:
-                move_speed = 5
-                logger.info("Move speed muito baixo, ajustando para velocidade mínima")
-            
-            # Arredondar para número inteiro
-            move_speed = round(move_speed)
-            
+                
         except (ValueError, TypeError) as e:
             logger.error(f"Erro ao converter move_speed: {str(e)}")
             move_speed = 0
-        
+            
         # Processar e validar heart_rate
         try:
             heart_rate = float(raw_data.get('heart_rate', 0))
@@ -139,10 +131,7 @@ def convert_radar_data(raw_data):
         if heart_rate is not None and breath_rate is not None and breath_rate > 0:
             ratio = heart_rate / breath_rate
             if not (HEART_BREATH_RATIO_MIN <= ratio <= HEART_BREATH_RATIO_MAX):
-                logger.warning(f"Razão heart_rate/breath_rate inconsistente: {ratio:.2f}")
-                # Se a razão estiver muito fora, descartar ambos os valores
-                heart_rate = None
-                breath_rate = None
+                logger.warning(f"Razão heart_rate/breath_rate alta mas aceitável: {ratio:.2f}")
         
         # Montar dados convertidos
         converted_data = {
@@ -330,6 +319,21 @@ class ShelfManager:
 # Instância global do gerenciador de seções
 shelf_manager = ShelfManager()
 
+# Configurações do MySQL
+db_config = {
+    "host": os.getenv("DB_HOST", "168.75.89.11"),
+    "user": os.getenv("DB_USER", "belugaDB"),
+    "password": os.getenv("DB_PASSWORD", "Rpcr@300476"),
+    "database": os.getenv("DB_NAME", "Beluga_Analytics"),
+    "port": int(os.getenv("DB_PORT", 3306)),
+    "use_pure": True,
+    "auth_plugin": "mysql_native_password",
+    "connect_timeout": 120,
+    "pool_size": 3,
+    "charset": "utf8mb4",
+    "collation": "utf8mb4_unicode_ci"
+}
+
 class DatabaseManager:
     def __init__(self):
         self.conn = None
@@ -352,23 +356,8 @@ class DatabaseManager:
                     except:
                         pass
                 
-                # Usando driver puro Python e configurações SSL mais simples
-                db_config = {
-                    "host": os.getenv("DB_HOST", "168.75.89.11"),
-                    "user": os.getenv("DB_USER", "belugaDB"),
-                    "password": os.getenv("DB_PASSWORD", "Rpcr@300476"),
-                    "database": os.getenv("DB_NAME", "Beluga_Analytics"),
-                    "port": int(os.getenv("DB_PORT", 3306)),
-                    "use_pure": True,
-                    "ssl_disabled": True,
-                    "auth_plugin": "mysql_native_password",
-                    "connect_timeout": 120,
-                    "pool_size": 3,
-                    "charset": "utf8mb4",
-                    "collation": "utf8mb4_unicode_ci"
-                }
                 self.conn = mysql.connector.connect(**db_config)
-                self.cursor = self.conn.cursor(dictionary=True)
+                self.cursor = self.conn.cursor(dictionary=True, buffered=True)
                 
                 # Testar conexão
                 self.cursor.execute("SELECT 1")
@@ -389,7 +378,7 @@ class DatabaseManager:
     def initialize_database(self):
         """Inicializa o banco de dados"""
         try:
-            # Verificar/criar tabela de dispositivos primeiro
+            # Verificar tabela de dispositivos
             logger.info("Verificando tabela de dispositivos...")
             self.cursor.execute("""
                 CREATE TABLE IF NOT EXISTS Dispositivos (
@@ -401,115 +390,89 @@ class DatabaseManager:
                 )
             """)
             
-            # Inserir dispositivo padrão se não existir
+            # Verificar dispositivo padrão
             logger.info("Verificando dispositivo padrão...")
             self.cursor.execute("""
-                INSERT IGNORE INTO Dispositivos (serial_number, nome, tipo)
-                VALUES ('RADAR_1', 'Radar Principal', 'RADAR')
+                INSERT IGNORE INTO Dispositivos 
+                (serial_number, nome, tipo)
+                VALUES 
+                ('RADAR_1', 'Radar Principal', 'RADAR')
             """)
             
-            # Inserir dispositivo padrão se não existir
-            logger.info("Verificando dispositivo padrão...")
+            # Verificar tabela radar_dados
+            logger.info("Verificando tabela radar_dados...")
             self.cursor.execute("""
-                INSERT IGNORE INTO Dispositivos (serial_number, nome, tipo)
-                VALUES ('SERIAL_2', 'Radar Teste 2', 'RADAR')
+                CREATE TABLE IF NOT EXISTS radar_dados (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    x_point FLOAT,
+                    y_point FLOAT,
+                    move_speed FLOAT,
+                    heart_rate FLOAT,
+                    breath_rate FLOAT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    serial_number VARCHAR(50),
+                    satisfaction_score FLOAT,
+                    satisfaction_class VARCHAR(20),
+                    is_engaged BOOLEAN,
+                    engagement_duration INT,
+                    session_id VARCHAR(50),
+                    section_id INT,
+                    product_id VARCHAR(50),
+                    FOREIGN KEY (serial_number) REFERENCES Dispositivos(serial_number)
+                )
             """)
             
-            # Verificar se a tabela radar_dados existe
-            self.cursor.execute("SHOW TABLES LIKE 'radar_dados'")
-            table_exists = self.cursor.fetchone()
+            # Verificar tabela radar_sessoes
+            logger.info("Verificando tabela radar_sessoes...")
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS radar_sessoes (
+                    session_id VARCHAR(50) PRIMARY KEY,
+                    start_time DATETIME,
+                    end_time DATETIME,
+                    duration INT,
+                    avg_heart_rate FLOAT,
+                    avg_breath_rate FLOAT,
+                    avg_satisfaction FLOAT,
+                    satisfaction_class VARCHAR(20),
+                    is_engaged BOOLEAN,
+                    data_points INT
+                )
+            """)
             
-            if not table_exists:
-                # Criar tabela se não existir
-                logger.info("Criando tabela radar_dados...")
+            # Verificar tabela shelf_sections
+            logger.info("Verificando tabela shelf_sections...")
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS shelf_sections (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    section_name VARCHAR(50),
+                    x_start FLOAT,
+                    y_start FLOAT,
+                    x_end FLOAT,
+                    y_end FLOAT,
+                    product_id VARCHAR(50),
+                    product_name VARCHAR(100),
+                    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    is_active BOOLEAN DEFAULT TRUE
+                )
+            """)
+            
+            # Verificar se já existem seções
+            self.cursor.execute("SELECT COUNT(*) as count FROM shelf_sections")
+            count = self.cursor.fetchone()['count']
+            
+            # Só adicionar seções padrão se a tabela estiver vazia
+            if count == 0:
+                logger.info("Adicionando seções padrão...")
                 self.cursor.execute("""
-                    CREATE TABLE radar_dados (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        x_point FLOAT,
-                        y_point FLOAT,
-                        move_speed FLOAT,
-                        heart_rate FLOAT,
-                        breath_rate FLOAT,
-                        satisfaction_score FLOAT,
-                        satisfaction_class VARCHAR(20),
-                        is_engaged BOOLEAN,
-                        engagement_duration INT,
-                        session_id VARCHAR(36),
-                        section_id INT,
-                        product_id VARCHAR(50),
-                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        serial_number VARCHAR(50),
-                        FOREIGN KEY (serial_number) REFERENCES Dispositivos(serial_number)
-                    )
+                    INSERT INTO shelf_sections 
+                    (section_name, x_start, y_start, x_end, y_end, product_id, product_name)
+                    VALUES 
+                    ('Sagatiba', 0.0, 0.0, 0.5, 0.3, 'SAGATIBA001', 'Sagatiba'),
+                    ('Skyy', 0.5, 0.0, 1.0, 0.3, 'SKYY001', 'Skyy')
                 """)
-                logger.info("Tabela radar_dados criada com sucesso!")
-            
-            # Verificar se a coluna serial_number existe
-            self.cursor.execute("SHOW COLUMNS FROM radar_dados LIKE 'serial_number'")
-            serial_number_exists = self.cursor.fetchone()
-            
-            if not serial_number_exists:
-                logger.info("Adicionando coluna serial_number...")
-                try:
-                    # Adicionar coluna com valor padrão
-                    self.cursor.execute("""
-                        ALTER TABLE radar_dados 
-                        ADD COLUMN serial_number VARCHAR(50),
-                        ADD FOREIGN KEY (serial_number) REFERENCES Dispositivos(serial_number)
-                    """)
-                    # Atualizar registros existentes
-                    self.cursor.execute("""
-                        UPDATE radar_dados 
-                        SET serial_number = 'RADAR_1' 
-                        WHERE serial_number IS NULL
-                    """)
-                    logger.info("Coluna serial_number adicionada e atualizada com sucesso!")
-                except Exception as e:
-                    logger.error(f"Erro ao adicionar coluna serial_number: {str(e)}")
-            
-            # Verificar e adicionar outras colunas que estão faltando
-            logger.info("Verificando outras colunas da tabela radar_dados...")
-            
-            # Verificar se as colunas existem
-            self.cursor.execute("DESCRIBE radar_dados")
-            columns = self.cursor.fetchall()
-            existing_columns = [column['Field'] for column in columns]
-            
-            logger.info(f"Colunas existentes: {existing_columns}")
-            
-            # Colunas que devem existir
-            required_columns = {
-                'satisfaction_score': 'ADD COLUMN satisfaction_score FLOAT',
-                'satisfaction_class': 'ADD COLUMN satisfaction_class VARCHAR(20)',
-                'is_engaged': 'ADD COLUMN is_engaged BOOLEAN',
-                'engagement_duration': 'ADD COLUMN engagement_duration INT',
-                'session_id': 'ADD COLUMN session_id VARCHAR(36)',
-                'section_id': 'ADD COLUMN section_id INT',
-                'product_id': 'ADD COLUMN product_id VARCHAR(50)'
-            }
-            
-            # Adicionar colunas faltantes
-            for column, add_command in required_columns.items():
-                if column not in existing_columns:
-                    logger.info(f"Adicionando coluna {column}...")
-                    try:
-                        self.cursor.execute(f"ALTER TABLE radar_dados {add_command}")
-                        logger.info(f"Coluna {column} adicionada com sucesso!")
-                    except Exception as e:
-                        logger.error(f"Erro ao adicionar coluna {column}: {str(e)}")
             
             self.conn.commit()
             logger.info("✅ Banco de dados atualizado com sucesso!")
-            
-            # Adicionar as duas novas seções da gôndola
-            logger.info("Adicionando seções da gôndola para o teste 2...")
-            self.cursor.execute("""
-                INSERT IGNORE INTO shelf_sections 
-                (section_name, x_start, y_start, x_end, y_end, product_id, product_name)
-                VALUES 
-                ('Seção 1 - Teste 2', 0.0, 0.0, 0.5, 0.3, 'PROD001', 'Produto Teste 1'),
-                ('Seção 2 - Teste 2', 0.5, 0.0, 1.0, 0.3, 'PROD002', 'Produto Teste 2')
-            """)
             
         except Exception as e:
             logger.error(f"❌ Erro ao inicializar banco: {str(e)}")
@@ -806,6 +769,34 @@ class DatabaseManager:
             logger.error(traceback.format_exc())
             return None
 
+    def get_active_session(self, x_point, y_point, move_speed, timestamp):
+        """Verifica se existe uma sessão ativa para as coordenadas fornecidas"""
+        try:
+            # Buscar a última sessão registrada nos últimos 5 minutos
+            query = """
+                SELECT DISTINCT session_id, timestamp
+                FROM radar_dados
+                WHERE timestamp >= DATE_SUB(%s, INTERVAL 5 MINUTE)
+                AND ABS(x_point - %s) < 0.5
+                AND ABS(y_point - %s) < 0.5
+                ORDER BY timestamp DESC
+                LIMIT 1
+            """
+            
+            self.cursor.execute(query, (timestamp, x_point, y_point))
+            result = self.cursor.fetchone()
+            
+            if result:
+                logger.info(f"Sessão ativa encontrada: {result['session_id']}")
+                return result['session_id']
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Erro ao buscar sessão ativa: {str(e)}")
+            logger.error(traceback.format_exc())
+            return None
+
     def insert_radar_data(self, data):
         """Insere dados do radar no banco"""
         try:
@@ -814,7 +805,7 @@ class DatabaseManager:
             logger.info(f"Dados recebidos: {data}")
             
             # Verificar campos obrigatórios
-            required_fields = ['x_point', 'y_point', 'move_speed', 'heart_rate', 'breath_rate']
+            required_fields = ['x_point', 'y_point', 'move_speed']
             for field in required_fields:
                 if field not in data:
                     logger.error(f"Campo obrigatório ausente: {field}")
@@ -833,17 +824,31 @@ class DatabaseManager:
             if 'engagement_duration' not in data or data['engagement_duration'] is None:
                 data['engagement_duration'] = 0
                 
-            if 'session_id' not in data or data['session_id'] is None:
-                data['session_id'] = None
+            # Verificar se já existe uma sessão ativa
+            timestamp = data.get('timestamp', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            active_session = self.get_active_session(
+                float(data.get('x_point')),
+                float(data.get('y_point')),
+                float(data.get('move_speed')),
+                timestamp
+            )
+            
+            # Usar sessão existente ou criar nova
+            if active_session:
+                data['session_id'] = active_session
+                logger.info(f"Usando sessão existente: {active_session}")
+            elif 'session_id' not in data or data['session_id'] is None:
+                data['session_id'] = str(uuid.uuid4())
+                logger.info(f"Novo session_id gerado: {data['session_id']}")
                 
             if 'section_id' not in data or data['section_id'] is None:
-                data['section_id'] = None
+                data['section_id'] = 1
                 
             if 'product_id' not in data or data['product_id'] is None:
-                data['product_id'] = None
+                data['product_id'] = 'UNKNOWN'
                 
             if 'serial_number' not in data or data['serial_number'] is None:
-                data['serial_number'] = 'SERIAL_2'
+                data['serial_number'] = 'RADAR_1'
             
             # Query de inserção
             query = """
@@ -856,20 +861,20 @@ class DatabaseManager:
             
             # Preparar parâmetros
             params = (
-                data.get('x_point'),
-                data.get('y_point'),
-                data.get('move_speed'),
-                data.get('heart_rate'),
-                data.get('breath_rate'),
-                data.get('satisfaction_score', 0),
+                float(data.get('x_point')),
+                float(data.get('y_point')),
+                float(data.get('move_speed')),
+                float(data.get('heart_rate')) if data.get('heart_rate') is not None else None,
+                float(data.get('breath_rate')) if data.get('breath_rate') is not None else None,
+                float(data.get('satisfaction_score', 0)),
                 data.get('satisfaction_class', 'NEUTRA'),
-                data.get('is_engaged', False),
-                data.get('engagement_duration', 0),
-                data.get('session_id'),
-                data.get('section_id'),
-                data.get('product_id'),
-                data.get('timestamp', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                data.get('serial_number', 'SERIAL_2')
+                bool(data.get('is_engaged', False)),
+                int(data.get('engagement_duration', 0)),
+                data['session_id'],  # Agora garantimos que sempre terá um valor
+                int(data.get('section_id', 1)),
+                data.get('product_id', 'UNKNOWN'),
+                timestamp,
+                data.get('serial_number', 'RADAR_1')
             )
             
             logger.info(f"Query: {query}")
@@ -937,8 +942,10 @@ class AnalyticsManager:
             if (record.get('move_speed') is not None and 
                 record.get('timestamp') is not None):
                 try:
-                    # Tentar converter o timestamp para datetime
-                    record_time = datetime.strptime(record['timestamp'], '%Y-%m-%d %H:%M:%S')
+                    # Tentar converter o timestamp para datetime se for string
+                    record_time = (record['timestamp'] 
+                                 if isinstance(record['timestamp'], datetime)
+                                 else datetime.strptime(record['timestamp'], '%Y-%m-%d %H:%M:%S'))
                     
                     # Verificar se o registro não é muito antigo (máximo 10 segundos)
                     if (current_time - record_time).total_seconds() <= 10:
@@ -1112,18 +1119,34 @@ class UserSessionManager:
         self.MOVEMENT_THRESHOLD = 50.0  # Movimento máximo para considerar "parado" em cm/s
         self.ABSENCE_THRESHOLD = 3.0   # Distância mínima para considerar ausência (metros)
         self.TIME_THRESHOLD = 2        # Tempo mínimo (segundos) para considerar uma nova sessão
+        self.DISTANCE_THRESHOLD = 1.0  # Distância mínima entre clientes diferentes (metros)
         
-        # Estado atual
-        self.current_session_id = None
-        self.last_presence_time = None
-        self.last_absence_time = None
-        self.session_start_time = None
-        self.session_data = {}
-        self.last_position = (None, None)
-        self.last_distance = None
-        self.is_present = False
-        self.consecutive_presence_count = 0  # Contador de presenças consecutivas
-        self.engagement_start_time = None  # Tempo de início do engajamento
+        # Dicionário para armazenar sessões ativas
+        self.active_sessions = {}  # {session_id: session_data}
+        self.session_positions = {}  # {session_id: (last_x, last_y)}
+        
+    def find_closest_session(self, x, y, timestamp):
+        """
+        Encontra a sessão mais próxima das coordenadas fornecidas
+        Retorna: (session_id, distance) ou (None, None) se nenhuma sessão próxima for encontrada
+        """
+        closest_session = None
+        min_distance = float('inf')
+        
+        for session_id, last_pos in self.session_positions.items():
+            # Verificar se a sessão não está expirada (mais de 5 segundos sem atualização)
+            session_data = self.active_sessions[session_id]
+            if (timestamp - session_data['last_update']).total_seconds() > 5:
+                continue
+                
+            # Calcular distância euclidiana
+            distance = ((x - last_pos[0]) ** 2 + (y - last_pos[1]) ** 2) ** 0.5
+            
+            if distance < min_distance:
+                min_distance = distance
+                closest_session = session_id
+        
+        return closest_session, min_distance
         
     def detect_session(self, data, timestamp=None):
         """
@@ -1133,7 +1156,6 @@ class UserSessionManager:
         """
         if timestamp is None:
             try:
-                # Tentar usar o timestamp dos dados
                 if 'timestamp' in data and data['timestamp']:
                     timestamp = datetime.strptime(data['timestamp'], '%Y-%m-%d %H:%M:%S')
                 else:
@@ -1146,149 +1168,136 @@ class UserSessionManager:
         x_point = data.get('x_point')
         y_point = data.get('y_point')
         move_speed = data.get('move_speed', 999)
-        is_engaged = data.get('is_engaged', 0)  # 0=não, 1=inicial, 2=completo
+        is_engaged = data.get('is_engaged', 0)
         engagement_duration = data.get('engagement_duration', 0)
         
         # Calcular distância do centro (0,0)
         distance = np.sqrt(x_point**2 + y_point**2) if x_point is not None and y_point is not None else None
         
         # Log para debug
-        logger.info(f"Detecção de sessão: x={x_point}, y={y_point}, move_speed={move_speed} cm/s, distância={distance} m, timestamp={timestamp}")
-        
-        # Inicializar evento como None (sem evento)
-        event_type = None
+        logger.info(f"Detecção de sessão: x={x_point}, y={y_point}, move_speed={move_speed} cm/s, distância={distance} m")
         
         # Verificar se há dados suficientes
         if distance is None:
-            return self.current_session_id, None, None
+            return None, None, None
             
-        # Detectar presença/ausência
-        was_present = self.is_present
+        # Buscar sessão mais próxima
+        closest_session_id, session_distance = self.find_closest_session(x_point, y_point, timestamp)
         
-        # Pessoa está presente se estiver próxima e com movimento limitado
-        if distance <= self.PRESENCE_THRESHOLD:
-            self.consecutive_presence_count += 1
-            logger.info(f"Presença detectada! Contagem: {self.consecutive_presence_count}")
+        # Se encontrou uma sessão próxima e a distância é menor que o threshold
+        if closest_session_id and session_distance <= self.DISTANCE_THRESHOLD:
+            session_data = self.active_sessions[closest_session_id]
+            session_data['last_update'] = timestamp
             
-            # Só consideramos presente após 2 detecções consecutivas
-            if self.consecutive_presence_count >= 2:
-                self.is_present = True
-                self.last_presence_time = timestamp
-                
-                # Se não havia sessão, iniciar uma nova
-                if self.current_session_id is None:
-                    self.current_session_id = str(uuid.uuid4())
-                    self.session_start_time = timestamp
-                    self.session_data = {
-                        'session_id': self.current_session_id,
-                        'start_time': timestamp,
-                        'heart_rates': [],
-                        'breath_rates': [],
-                        'positions': [],
-                        'move_speeds': [],
-                        'satisfaction_scores': [],
-                        'is_engaged': 0,  # 0=não, 1=inicial, 2=completo
-                        'engagement_duration': 0
-                    }
-                    event_type = 'start'
-                    logger.info(f"🟢 Nova sessão iniciada: {self.current_session_id}")
+            # Atualizar posição
+            self.session_positions[closest_session_id] = (x_point, y_point)
+            
+            # Atualizar dados da sessão
+            if data.get('heart_rate') is not None:
+                session_data['heart_rates'].append(data.get('heart_rate'))
+            if data.get('breath_rate') is not None:
+                session_data['breath_rates'].append(data.get('breath_rate'))
+            if data.get('satisfaction_score') is not None:
+                session_data['satisfaction_scores'].append(data.get('satisfaction_score'))
+            
+            session_data['positions'].append((x_point, y_point))
+            session_data['move_speeds'].append(move_speed)
+            
+            # Verificar engajamento
+            if move_speed <= self.MOVEMENT_THRESHOLD:
+                if session_data.get('engagement_start_time') is None:
+                    session_data['engagement_start_time'] = timestamp
+                    session_data['is_engaged'] = 1
                 else:
-                    event_type = 'update'
-                    
-                # Atualizar dados da sessão
-                if data.get('heart_rate') is not None:
-                    self.session_data['heart_rates'].append(data.get('heart_rate'))
-                if data.get('breath_rate') is not None:
-                    self.session_data['breath_rates'].append(data.get('breath_rate'))
-                if data.get('satisfaction_score') is not None:
-                    self.session_data['satisfaction_scores'].append(data.get('satisfaction_score'))
-                
-                self.session_data['positions'].append((x_point, y_point))
-                self.session_data['move_speeds'].append(move_speed)
-                
-                # Verificar engajamento baseado no movimento
-                if move_speed <= self.MOVEMENT_THRESHOLD:
-                    logger.info(f"Movimento baixo detectado: {move_speed} cm/s <= {self.MOVEMENT_THRESHOLD} cm/s")
-                    
-                    # Iniciar rastreamento de engajamento se ainda não iniciado
-                    if self.engagement_start_time is None:
-                        self.engagement_start_time = timestamp
-                        logger.info(f"Início do engajamento registrado: {timestamp}")
-                        self.session_data['is_engaged'] = 1  # Engajamento inicial
-                    else:
-                        # Calcular duração do engajamento
-                        engagement_duration = (timestamp - self.engagement_start_time).total_seconds()
-                        self.session_data['engagement_duration'] = engagement_duration
-                        logger.info(f"Duração do engajamento: {engagement_duration} segundos")
-                        
-                        # Atualizar status de engajamento baseado na duração
-                        if engagement_duration >= 5:  # 5 segundos para engajamento completo
-                            self.session_data['is_engaged'] = 2  # Engajamento completo
-                            logger.info(f"Engajamento COMPLETO detectado! Duração: {engagement_duration} segundos")
-                        else:
-                            self.session_data['is_engaged'] = 1  # Engajamento inicial
-                            logger.info(f"Engajamento INICIAL mantido. Duração: {engagement_duration} segundos")
-                else:
-                    # Resetar rastreamento de engajamento se movimento for alto
-                    if self.engagement_start_time is not None:
-                        logger.info(f"Movimento alto detectado, resetando rastreamento de engajamento")
-                        self.engagement_start_time = None
-                        
-                # Usar o valor de engajamento calculado anteriormente se for maior
-                if is_engaged > self.session_data['is_engaged']:
-                    self.session_data['is_engaged'] = is_engaged
-                    self.session_data['engagement_duration'] = engagement_duration
-        else:
-            self.consecutive_presence_count = 0
+                    eng_duration = (timestamp - session_data['engagement_start_time']).total_seconds()
+                    session_data['engagement_duration'] = eng_duration
+                    if eng_duration >= 5:
+                        session_data['is_engaged'] = 2
+            else:
+                session_data['engagement_start_time'] = None
             
-            # Resetar rastreamento de engajamento se pessoa sair da área
-            if self.engagement_start_time is not None:
-                logger.info(f"Pessoa saiu da área, resetando rastreamento de engajamento")
-                self.engagement_start_time = None
-            
-            # Pessoa está ausente se estiver longe
+            # Verificar se a sessão deve ser finalizada
             if distance >= self.ABSENCE_THRESHOLD:
-                self.is_present = False
-                self.last_absence_time = timestamp
-                
-                # Se havia uma sessão ativa, finalizá-la
-                if was_present and self.current_session_id is not None:
-                    # Calcular métricas finais da sessão
-                    session_duration = (timestamp - self.session_start_time).total_seconds()
+                # Calcular métricas finais
+                session_duration = (timestamp - session_data['start_time']).total_seconds()
+                if session_duration >= self.TIME_THRESHOLD:
+                    session_data['end_time'] = timestamp
+                    session_data['duration'] = session_duration
+                    session_data['avg_heart_rate'] = np.mean(session_data['heart_rates']) if session_data['heart_rates'] else None
+                    session_data['avg_breath_rate'] = np.mean(session_data['breath_rates']) if session_data['breath_rates'] else None
+                    session_data['avg_satisfaction'] = np.mean(session_data['satisfaction_scores']) if session_data['satisfaction_scores'] else None
                     
-                    # Só considerar sessão válida se durou mais que o tempo mínimo
-                    if session_duration >= self.TIME_THRESHOLD:
-                        # Calcular médias
-                        avg_heart_rate = np.mean(self.session_data['heart_rates']) if self.session_data['heart_rates'] else None
-                        avg_breath_rate = np.mean(self.session_data['breath_rates']) if self.session_data['breath_rates'] else None
-                        avg_satisfaction = np.mean(self.session_data['satisfaction_scores']) if self.session_data['satisfaction_scores'] else None
-                        
-                        # Adicionar métricas finais
-                        self.session_data['end_time'] = timestamp
-                        self.session_data['duration'] = session_duration
-                        self.session_data['avg_heart_rate'] = avg_heart_rate
-                        self.session_data['avg_breath_rate'] = avg_breath_rate
-                        self.session_data['avg_satisfaction'] = avg_satisfaction
-                        
-                        event_type = 'end'
-                        logger.info(f"🔴 Sessão finalizada: {self.current_session_id}, duração: {session_duration:.2f}s")
-                        
-                        # Guardar dados da sessão antes de resetar
-                        session_data_copy = self.session_data.copy()
-                        
-                        # Resetar sessão
-                        self.current_session_id = None
-                        self.session_start_time = None
-                        self.session_data = {}
-                        self.engagement_start_time = None
-                        
-                        return session_data_copy['session_id'], event_type, session_data_copy
+                    # Remover sessão das ativas
+                    self.active_sessions.pop(closest_session_id)
+                    self.session_positions.pop(closest_session_id)
+                    
+                    return closest_session_id, 'end', session_data
+            
+            return closest_session_id, 'update', session_data
+            
+        # Se não encontrou sessão próxima e está dentro da área de detecção
+        elif distance <= self.PRESENCE_THRESHOLD:
+            # Criar nova sessão
+            new_session_id = str(uuid.uuid4())
+            new_session = {
+                'session_id': new_session_id,
+                'start_time': timestamp,
+                'last_update': timestamp,
+                'heart_rates': [],
+                'breath_rates': [],
+                'positions': [(x_point, y_point)],
+                'move_speeds': [move_speed],
+                'satisfaction_scores': [],
+                'is_engaged': 0,
+                'engagement_duration': 0,
+                'engagement_start_time': None
+            }
+            
+            # Adicionar dados vitais se disponíveis
+            if data.get('heart_rate') is not None:
+                new_session['heart_rates'].append(data.get('heart_rate'))
+            if data.get('breath_rate') is not None:
+                new_session['breath_rates'].append(data.get('breath_rate'))
+            if data.get('satisfaction_score') is not None:
+                new_session['satisfaction_scores'].append(data.get('satisfaction_score'))
+            
+            # Armazenar nova sessão
+            self.active_sessions[new_session_id] = new_session
+            self.session_positions[new_session_id] = (x_point, y_point)
+            
+            logger.info(f"🟢 Nova sessão iniciada: {new_session_id}")
+            return new_session_id, 'start', new_session
+            
+        return None, None, None
         
-        # Atualizar última posição e distância
-        self.last_position = (x_point, y_point)
-        self.last_distance = distance
+    def cleanup_expired_sessions(self, current_time):
+        """Remove sessões expiradas (sem atualização por mais de 5 segundos)"""
+        expired_sessions = []
         
-        return self.current_session_id, event_type, self.session_data
+        for session_id, session_data in self.active_sessions.items():
+            if (current_time - session_data['last_update']).total_seconds() > 5:
+                expired_sessions.append(session_id)
+                
+        for session_id in expired_sessions:
+            session_data = self.active_sessions.pop(session_id)
+            self.session_positions.pop(session_id)
+            
+            # Calcular métricas finais
+            session_duration = (current_time - session_data['start_time']).total_seconds()
+            if session_duration >= self.TIME_THRESHOLD:
+                session_data['end_time'] = current_time
+                session_data['duration'] = session_duration
+                session_data['avg_heart_rate'] = np.mean(session_data['heart_rates']) if session_data['heart_rates'] else None
+                session_data['avg_breath_rate'] = np.mean(session_data['breath_rates']) if session_data['breath_rates'] else None
+                session_data['avg_satisfaction'] = np.mean(session_data['satisfaction_scores']) if session_data['satisfaction_scores'] else None
+                
+                logger.info(f"🔴 Sessão expirada finalizada: {session_id}, duração: {session_duration:.2f}s")
+                
+                # Salvar sessão no banco de dados
+                try:
+                    db_manager.save_session_summary(session_data)
+                except Exception as e:
+                    logger.error(f"Erro ao salvar sessão expirada: {str(e)}")
 
 # Instância global do gerenciador de sessões
 user_session_manager = UserSessionManager()
