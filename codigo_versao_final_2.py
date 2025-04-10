@@ -27,143 +27,44 @@ load_dotenv()
 app = Flask(__name__)
 
 def convert_radar_data(raw_data):
-    """Converte dados do radar para o formato do banco"""
+    """Converte dados brutos do radar para o formato do banco de dados"""
     try:
-        logger.debug(f"Convertendo dados brutos: {raw_data}")
+        # Extrair dados do JSON
+        data = json.loads(raw_data)
         
-        # Constantes para validação
-        HEART_RATE_MIN = 40  # Ajustado para ser mais realista
-        HEART_RATE_MAX = 180 # Ajustado para ser mais realista
-        BREATH_RATE_MIN = 8  # Ajustado para ser mais realista
-        BREATH_RATE_MAX = 30 # Ajustado para ser mais realista
-        MOVE_SPEED_MIN = 0
-        MOVE_SPEED_MAX = 200  # Aumentado para 2 m/s
-        COORD_MIN = -2  # -2 metros
-        COORD_MAX = 2   # 2 metros
-        HEART_BREATH_RATIO_MIN = 2.0  # Ajustado para ser mais realista
-        HEART_BREATH_RATIO_MAX = 7.0  # Ajustado para ser mais realista
+        # Converter valores para float
+        x_point = float(data.get('x_point', 0))
+        y_point = float(data.get('y_point', 0))
+        move_speed = float(data.get('move_speed', 0))
+        heart_rate = float(data.get('heart_rate', 0))
+        breath_rate = float(data.get('breath_rate', 0))
         
-        # Processar e validar coordenadas
-        try:
-            x_point = float(raw_data.get('x_point', raw_data.get('x', 0)))
-            y_point = float(raw_data.get('y_point', raw_data.get('y', 0)))
-            
-            # Validar e normalizar coordenadas
-            if abs(x_point) > COORD_MAX or abs(y_point) > COORD_MAX:
-                logger.warning(f"Coordenadas fora dos limites: ({x_point}, {y_point})")
-                x_point = max(min(x_point, COORD_MAX), COORD_MIN)
-                y_point = max(min(y_point, COORD_MAX), COORD_MIN)
-                
-            # Arredondar para 2 casas decimais
-            x_point = round(x_point, 2)
-            y_point = round(y_point, 2)
-            
-        except (ValueError, TypeError) as e:
-            logger.error(f"Erro ao converter coordenadas: {str(e)}")
-            x_point = 0
-            y_point = 0
-            
-        # Processar e validar move_speed
-        try:
-            move_speed = float(raw_data.get('move_speed', 0))
-            
-            # Validar valores absurdos
-            if move_speed < 0:
-                logger.warning(f"Move speed negativo: {move_speed}, convertendo para positivo")
-                move_speed = abs(move_speed)
-            elif move_speed > MOVE_SPEED_MAX:
-                logger.warning(f"Move speed muito alto: {move_speed}, limitando a {MOVE_SPEED_MAX}")
-                move_speed = MOVE_SPEED_MAX
-                
-        except (ValueError, TypeError) as e:
-            logger.error(f"Erro ao converter move_speed: {str(e)}")
-            move_speed = 0
-            
-        # Processar e validar heart_rate
-        try:
-            heart_rate = raw_data.get('heart_rate')
-            if heart_rate is not None:
-                heart_rate = float(heart_rate)
-                
-                # Validar valores absurdos
-                if heart_rate > 300 or heart_rate < 0:
-                    logger.warning(f"Heart rate inválido: {heart_rate}, descartando")
-                    heart_rate = None
-                # Validar faixa normal
-                elif not (HEART_RATE_MIN <= heart_rate <= HEART_RATE_MAX):
-                    logger.warning(f"Heart rate fora da faixa aceitável: {heart_rate} bpm")
-                    if heart_rate < HEART_RATE_MIN:
-                        heart_rate = HEART_RATE_MIN
-                    elif heart_rate > HEART_RATE_MAX:
-                        heart_rate = HEART_RATE_MAX
-                
-                # Arredondar para número inteiro
-                if heart_rate is not None:
-                    heart_rate = round(heart_rate)
-                    
-        except (ValueError, TypeError) as e:
-            logger.error(f"Erro ao converter heart_rate: {str(e)}")
-            heart_rate = None
+        # Calcular satisfação
+        satisfaction_score = calculate_satisfaction(move_speed, heart_rate, breath_rate)
+        satisfaction_class = classify_satisfaction(satisfaction_score)
         
-        # Processar e validar breath_rate
-        try:
-            breath_rate = raw_data.get('breath_rate')
-            if breath_rate is not None:
-                breath_rate = float(breath_rate)
-                
-                # Validar valores absurdos
-                if breath_rate > 60 or breath_rate < 0:
-                    logger.warning(f"Breath rate inválido: {breath_rate}, descartando")
-                    breath_rate = None
-                # Validar faixa normal
-                elif not (BREATH_RATE_MIN <= breath_rate <= BREATH_RATE_MAX):
-                    logger.warning(f"Breath rate fora da faixa aceitável: {breath_rate} rpm")
-                    if breath_rate < BREATH_RATE_MIN:
-                        breath_rate = BREATH_RATE_MIN
-                    elif breath_rate > BREATH_RATE_MAX:
-                        breath_rate = BREATH_RATE_MAX
-                
-                # Arredondar para número inteiro
-                if breath_rate is not None:
-                    breath_rate = round(breath_rate)
-                    
-        except (ValueError, TypeError) as e:
-            logger.error(f"Erro ao converter breath_rate: {str(e)}")
-            breath_rate = None
+        # Identificar se está engajado
+        is_engaged = move_speed < 0.5  # Considera engajado se velocidade < 0.5 m/s
         
-        # Validar consistência entre heart_rate e breath_rate
-        if heart_rate is not None and breath_rate is not None and breath_rate > 0:
-            ratio = heart_rate / breath_rate
-            if not (HEART_BREATH_RATIO_MIN <= ratio <= HEART_BREATH_RATIO_MAX):
-                logger.warning(f"Razão heart_rate/breath_rate fora do esperado: {ratio:.2f}")
+        # Identificar seção e produto
+        section = shelf_manager.get_section_at_position(x_point, y_point)
+        section_id = section['id'] if section else None
+        product_id = section['product_id'] if section else None
         
-        # Obter serial_number dos dados ou usar valor padrão
-        serial_number = raw_data.get('serial_number', 'RADAR_1')
-        
-        # Montar dados convertidos
-        converted_data = {
-            'device_id': serial_number,
+        return {
             'x_point': x_point,
             'y_point': y_point,
             'move_speed': move_speed,
             'heart_rate': heart_rate,
             'breath_rate': breath_rate,
-            'serial_number': serial_number
+            'satisfaction_score': satisfaction_score,
+            'satisfaction_class': satisfaction_class,
+            'is_engaged': is_engaged,
+            'section_id': section_id,
+            'product_id': product_id
         }
-        
-        # Log detalhado dos dados processados
-        logger.info(f"✅ Dados convertidos com sucesso:")
-        logger.info(f"  - Posição: ({x_point}, {y_point})")
-        logger.info(f"  - Velocidade: {move_speed} cm/s")
-        logger.info(f"  - Heart Rate: {heart_rate} bpm")
-        logger.info(f"  - Breath Rate: {breath_rate} rpm")
-        logger.info(f"  - Serial Number: {converted_data['serial_number']}")
-        
-        return converted_data
-        
     except Exception as e:
-        logger.error(f"❌ Erro ao converter dados: {str(e)}")
-        logger.error(f"Stack trace: {traceback.format_exc()}")
+        logger.error(f"Erro ao converter dados do radar: {str(e)}")
         return None
 
 class ShelfManager:
@@ -395,6 +296,38 @@ class DatabaseManager:
     def initialize_database(self):
         """Inicializa o banco de dados"""
         try:
+            # Dropar tabela areas existente
+            logger.info("Removendo tabela areas antiga...")
+            self.cursor.execute("DROP TABLE IF EXISTS areas")
+            
+            # Criar nova tabela areas
+            logger.info("Criando nova tabela areas...")
+            self.cursor.execute("""
+                CREATE TABLE areas (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    area_name VARCHAR(50) NOT NULL,
+                    y_min FLOAT NOT NULL,
+                    y_max FLOAT NOT NULL,
+                    speed_threshold FLOAT NOT NULL,
+                    description TEXT,
+                    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    is_active BOOLEAN DEFAULT TRUE
+                )
+            """)
+            
+            # Inserir áreas padrão
+            logger.info("Adicionando areas padrão...")
+            self.cursor.execute("""
+                INSERT INTO areas 
+                (area_name, y_min, y_max, speed_threshold, description)
+                VALUES 
+                ('PASSAGEM', 0.5, 999999.0, 0.5, 'Cliente apenas passando'),
+                ('ATENCAO', 0.3, 0.5, 0.3, 'Cliente olhando de longe'),
+                ('CONSIDERACAO', 0.15, 0.3, 0.2, 'Cliente analisando produtos'),
+                ('INTERACAO', 0.0, 0.15, 0.1, 'Cliente próximo, possivelmente pegando produto')
+            """)
+            logger.info("✅ Áreas padrão criadas com sucesso")
+            
             # Verificar tabela de dispositivos
             logger.info("Verificando tabela de dispositivos...")
             self.cursor.execute("""
@@ -426,20 +359,19 @@ class DatabaseManager:
                     move_speed FLOAT,
                     heart_rate FLOAT,
                     breath_rate FLOAT,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    serial_number VARCHAR(50),
                     satisfaction_score FLOAT,
                     satisfaction_class VARCHAR(20),
                     is_engaged BOOLEAN,
                     engagement_duration INT,
-                    session_id VARCHAR(50),
+                    session_id VARCHAR(36),
                     section_id INT,
-                    product_id VARCHAR(50),
-                    zone_id VARCHAR(50),
-                    area_id VARCHAR(50),
-                    FOREIGN KEY (serial_number) REFERENCES Dispositivos(serial_number)
+                    product_id VARCHAR(20),
+                    timestamp DATETIME,
+                    serial_number VARCHAR(20)
                 )
             """)
+            self.conn.commit()
+            logger.info("✅ Tabela radar_dados criada/verificada com sucesso!")
             
             # Verificar tabela radar_sessoes
             logger.info("Verificando tabela radar_sessoes...")
@@ -475,65 +407,6 @@ class DatabaseManager:
                 )
             """)
             
-            # Verificar tabela zones
-            logger.info("Verificando tabela zones...")
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS zones (
-                    zone_id VARCHAR(50) PRIMARY KEY,
-                    zone_name VARCHAR(100),
-                    x_start FLOAT,
-                    y_start FLOAT,
-                    x_end FLOAT,
-                    y_end FLOAT,
-                    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    is_active BOOLEAN DEFAULT TRUE
-                )
-            """)
-            
-            # Verificar tabela zone_metrics
-            logger.info("Verificando tabela zone_metrics...")
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS zone_metrics (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    zone_id VARCHAR(50),
-                    total_time INT,
-                    visits INT,
-                    last_visit DATETIME,
-                    current_visit_start DATETIME,
-                    FOREIGN KEY (zone_id) REFERENCES zones(zone_id)
-                )
-            """)
-            
-            # Verificar tabela areas
-            logger.info("Verificando tabela areas...")
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS areas (
-                    area_id VARCHAR(50) PRIMARY KEY,
-                    area_name VARCHAR(100),
-                    x_start FLOAT,
-                    y_start FLOAT,
-                    x_end FLOAT,
-                    y_end FLOAT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    is_active BOOLEAN DEFAULT TRUE
-                )
-            """)
-            
-            # Verificar tabela area_metrics
-            logger.info("Verificando tabela area_metrics...")
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS area_metrics (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    area_id VARCHAR(50),
-                    visit_count INT DEFAULT 0,
-                    avg_duration FLOAT DEFAULT 0.0,
-                    peak_hour INT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (area_id) REFERENCES areas(area_id)
-                )
-            """)
-            
             # Verificar se já existem seções
             self.cursor.execute("SELECT COUNT(*) as count FROM shelf_sections")
             count = self.cursor.fetchone()['count']
@@ -549,40 +422,7 @@ class DatabaseManager:
                     ('Mix de Frutas Secas', -0.25, 0.0, 0.25, 0.3, 'MIX001', 'Mix de Frutas Secas'),
                     ('Barras de Cereais', 0.25, 0.0, 0.75, 0.3, 'BAR001', 'Barras de Cereais')
                 """)
-            
-            # Verificar se já existem zonas
-            self.cursor.execute("SELECT COUNT(*) as count FROM zones")
-            count = self.cursor.fetchone()['count']
-            
-            # Só adicionar zonas padrão se a tabela estiver vazia
-            if count == 0:
-                logger.info("Adicionando zonas padrão...")
-                self.cursor.execute("""
-                    INSERT INTO zones 
-                    (zone_id, zone_name, x_start, y_start, x_end, y_end)
-                    VALUES 
-                    ('ZONE1', 'Entrada', -2.0, -2.0, -1.0, 2.0),
-                    ('ZONE2', 'Corredor Principal', -1.0, -2.0, 1.0, 2.0),
-                    ('ZONE3', 'Saída', 1.0, -2.0, 2.0, 2.0)
-                """)
-            
-            # Verificar se já existem áreas cadastradas
-            self.cursor.execute("SELECT COUNT(*) as count FROM areas")
-            result = self.cursor.fetchone()
-            
-            if result['count'] == 0:
-                # Inserir áreas padrão
-                logger.info("Adicionando areas padrão...")
-                self.cursor.execute("""
-                    INSERT INTO areas
-                    (area_id, area_name, x_start, y_start, x_end, y_end)
-                    VALUES
-                    ('AREA1', 'Entrada', -2.0, -2.0, -1.0, 2.0),
-                    ('AREA2', 'Corredor Principal', -1.0, -2.0, 1.0, 2.0),
-                    ('AREA3', 'Saída', 1.0, -2.0, 2.0, 2.0)
-                """)
-                logger.info("Áreas padrão criadas com sucesso")
-            
+
             self.conn.commit()
             logger.info("✅ Banco de dados atualizado com sucesso!")
             
@@ -1509,91 +1349,171 @@ adaptive_sampler = AdaptiveSampler()
 
 class ZoneManager:
     def __init__(self):
-        self.zones = []
-        self.zone_metrics = {}
-        
-    def add_zone(self, zone_data):
-        """Adiciona uma nova zona de monitoramento"""
-        self.zones.append(zone_data)
-        self.zone_metrics[zone_data['zone_id']] = {
-            'total_time': 0,
-            'visits': 0,
-            'last_visit': None,
-            'current_visit_start': None
-        }
+        # Constantes para análise comportamental
+        self.HESITATION_SPEED_THRESHOLD = 5.0  # cm/s
+        self.HESITATION_TIME_THRESHOLD = 3.0   # segundos
+        self.INTERACTION_TIME_THRESHOLD = 5.0   # segundos
+        self.CONSIDERATION_TIME_THRESHOLD = 10.0 # segundos
         
     def get_zone_at_position(self, x, y):
         """Identifica a zona baseado nas coordenadas (x, y)"""
-        for zone in self.zones:
-            if (zone['x_start'] <= x <= zone['x_end'] and 
-                zone['y_start'] <= y <= zone['y_end']):
-                return zone
-        return None
-        
-    def update_zone_metrics(self, zone_id, timestamp):
-        """Atualiza as métricas da zona"""
-        if zone_id not in self.zone_metrics:
-            return
+        try:
+            # Buscar áreas ativas que contenham o ponto (x, y)
+            query = """
+                SELECT * FROM areas
+                WHERE is_active = TRUE
+                AND x_start <= %s AND x_end >= %s
+                AND y_start <= %s AND y_end >= %s
+                ORDER BY ABS(x_start - %s) + ABS(y_start - %s)
+                LIMIT 1
+            """
             
-        metrics = self.zone_metrics[zone_id]
-        
-        # Se é uma nova visita
-        if metrics['current_visit_start'] is None:
-            metrics['current_visit_start'] = timestamp
-            metrics['visits'] += 1
+            params = (x, x, y, y, x, y)
             
-        # Atualiza o tempo total
-        metrics['total_time'] = timestamp - metrics['current_visit_start']
-        metrics['last_visit'] = timestamp
+            db_manager.cursor.execute(query, params)
+            area = db_manager.cursor.fetchone()
+            
+            if area:
+                # Calcular distância do ponto ao centro da área
+                center_x = (area['x_start'] + area['x_end']) / 2
+                center_y = (area['y_start'] + area['y_end']) / 2
+                distance = ((x - center_x) ** 2 + (y - center_y) ** 2) ** 0.5
+                
+                return {
+                    'area_id': area['id'],
+                    'area_name': area['area_name'],
+                    'description': area['description'],
+                    'distance': distance
+                }
+            
+            return {
+                'area_name': 'FORA_ALCANCE',
+                'description': 'Área fora do alcance de monitoramento',
+                'distance': abs(y)
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Erro ao buscar área: {str(e)}")
+            logger.error(traceback.format_exc())
+            return {
+                'area_name': 'ERRO',
+                'description': 'Erro ao identificar área',
+                'distance': 0
+            }
         
-    def reset_zone_visit(self, zone_id):
-        """Reseta a visita atual da zona"""
-        if zone_id in self.zone_metrics:
-            self.zone_metrics[zone_id]['current_visit_start'] = None
+    def analyze_behavior(self, x, y, move_speed, timestamp, area_id):
+        """Analisa o comportamento do cliente na área"""
+        try:
+            # Determinar profundidade de interação baseado na velocidade
+            if move_speed <= self.HESITATION_SPEED_THRESHOLD:
+                interaction_depth = 'INTERACAO'
+            elif move_speed <= self.HESITATION_SPEED_THRESHOLD * 2:
+                interaction_depth = 'CONSIDERACAO'
+            elif move_speed <= self.HESITATION_SPEED_THRESHOLD * 3:
+                interaction_depth = 'ATENCAO'
+            else:
+                interaction_depth = 'PASSAGEM'
+            
+            # Determinar padrão de comportamento baseado na velocidade
+            if move_speed <= self.HESITATION_SPEED_THRESHOLD:
+                behavior_pattern = 'INTERESSE_ALTO'
+            elif move_speed <= self.HESITATION_SPEED_THRESHOLD * 2:
+                behavior_pattern = 'INTERESSE_MEDIO'
+            elif move_speed <= self.HESITATION_SPEED_THRESHOLD * 3:
+                behavior_pattern = 'INTERESSE_BAIXO'
+            else:
+                behavior_pattern = 'PASSAGEM_RAPIDA'
+            
+            return {
+                'area_id': area_id,
+                'interaction_depth': interaction_depth,
+                'behavior_pattern': behavior_pattern,
+                'move_speed': move_speed,
+                'timestamp': timestamp
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Erro ao analisar comportamento: {str(e)}")
+            logger.error(traceback.format_exc())
+            return None
 
 class AreaManager:
+    """Gerenciador de áreas de engajamento do cliente"""
+    
     def __init__(self):
-        self.areas = []
-        self.area_metrics = {}
-        
-    def add_area(self, area_data):
-        """Adiciona uma nova área"""
-        self.areas.append(area_data)
-        self.area_metrics[area_data['area_id']] = {
-            'visit_count': 0,
-            'total_duration': 0.0,
-            'current_visit_start': None,
-            'peak_hour_visits': [0] * 24
+        self.areas = {
+            'PASSAGEM': {
+                'y_min': 0.5,  # Mais afastado
+                'y_max': float('inf'),
+                'speed_threshold': 0.5,  # Velocidade mais alta
+                'description': 'Cliente apenas passando'
+            },
+            'ATENCAO': {
+                'y_min': 0.3,
+                'y_max': 0.5,
+                'speed_threshold': 0.3,  # Velocidade moderada
+                'description': 'Cliente olhando de longe'
+            },
+            'CONSIDERACAO': {
+                'y_min': 0.15,
+                'y_max': 0.3,
+                'speed_threshold': 0.2,  # Velocidade mais baixa
+                'description': 'Cliente analisando produtos'
+            },
+            'INTERACAO': {
+                'y_min': 0.0,
+                'y_max': 0.15,  # Mais próximo
+                'speed_threshold': 0.1,  # Velocidade muito baixa
+                'description': 'Cliente próximo, possivelmente pegando produto'
+            }
         }
         
-    def get_area_at_position(self, x, y):
-        """Retorna a área em que um ponto (x,y) está localizado"""
-        for area in self.areas:
-            if (area['x_start'] <= x <= area['x_end'] and
-                area['y_start'] <= y <= area['y_end']):
-                return area
+    def get_area_at_position(self, x: float, y: float, speed: float) -> dict:
+        """Identifica a área baseada na posição Y e velocidade"""
+        for area_name, area in self.areas.items():
+            if area['y_min'] <= y < area['y_max'] and speed >= area['speed_threshold']:
+                return {
+                    'area_name': area_name,
+                    'description': area['description'],
+                    'y_distance': y,
+                    'speed': speed
+                }
         return None
         
-    def update_area_metrics(self, area_id, timestamp):
-        """Atualiza as métricas da área"""
-        if area_id not in self.area_metrics:
-            return
+    def analyze_behavior(self, x: float, y: float, speed: float, timestamp: datetime, current_area: str) -> dict:
+        """Analisa o comportamento do cliente na área atual"""
+        if not current_area:
+            return None
             
-        metrics = self.area_metrics[area_id]
-        
-        # Se é uma nova visita
-        if metrics['current_visit_start'] is None:
-            metrics['current_visit_start'] = timestamp
-            metrics['visits'] += 1
+        # Identificar padrão de comportamento
+        if speed < 0.1:
+            behavior_pattern = 'PARADO'
+        elif speed < 0.3:
+            behavior_pattern = 'ANALISANDO'
+        else:
+            behavior_pattern = 'PASSANDO'
             
-        # Atualiza o tempo total
-        metrics['total_time'] = timestamp - metrics['current_visit_start']
-        metrics['last_visit'] = timestamp
-        
-    def reset_area_visit(self, area_id):
-        """Reseta a visita atual da área"""
-        if area_id in self.area_metrics:
-            self.area_metrics[area_id]['current_visit_start'] = None
+        # Determinar profundidade de interação
+        if y <= 0.15:
+            interaction_depth = 'INTERACAO'
+        elif y <= 0.3:
+            interaction_depth = 'CONSIDERACAO'
+        elif y <= 0.5:
+            interaction_depth = 'ATENCAO'
+        else:
+            interaction_depth = 'PASSAGEM'
+            
+        return {
+            'area_name': current_area,
+            'behavior_pattern': behavior_pattern,
+            'interaction_depth': interaction_depth,
+            'y_distance': y,
+            'speed': speed,
+            'timestamp': timestamp
+        }
+
+# Instância global do gerenciador de áreas
+area_manager = AreaManager()
 
 @app.route('/radar/data', methods=['POST'])
 def receive_radar_data():
@@ -1632,6 +1552,14 @@ def receive_radar_data():
             
         # Adicionar timestamp
         converted_data['timestamp'] = current_time.strftime('%Y-%m-%d %H:%M:%S')
+
+        # Identificar área atual
+        area = area_manager.get_area_at_position(
+            converted_data['x_point'],
+            converted_data['y_point'],
+            converted_data['move_speed']
+        )
+        logger.info(f"🎯 Área atual: {area['area_name']} (distância: {area['distance']:.2f}m)")
         
         # Identificar seção baseado na posição
         section = shelf_manager.get_section_at_position(
@@ -1642,13 +1570,16 @@ def receive_radar_data():
         if section:
             converted_data['section_id'] = section['section_id']
             converted_data['product_id'] = section['product_id']
-            logger.info(f"Pessoa detectada na seção: {section['name']} (Produto: {section['product_id']})")
+            logger.info(f"📍 Seção detectada: {section['name']} (Produto: {section['product_id']})")
         else:
             converted_data['section_id'] = None
             converted_data['product_id'] = None
             
+        # Adicionar informação da área
+        converted_data['area'] = area['area_name']
+        
         # Obter últimos registros para calcular engajamento
-        last_records = db_manager.get_last_records(10)  # Aumentado para 10 registros
+        last_records = db_manager.get_last_records(10)
         
         # Calcular engajamento
         is_engaged, engagement_duration = analytics_manager.calculate_engagement(last_records)
@@ -2007,12 +1938,9 @@ def update_sampling_config():
 # Instância global do gerenciador de zonas
 zone_manager = ZoneManager()
 
-# Instância global do gerenciador de áreas
-area_manager = AreaManager()
-
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 3000))
-    host = os.getenv("HOST", "0.0.0.0")
+    port = 3000  # Porta fixa em 3000
+    host = "0.0.0.0"
     
     print("\n" + "="*50)
     print("🚀 Servidor Radar iniciando...")
