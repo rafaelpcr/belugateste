@@ -136,10 +136,9 @@ def convert_radar_data(raw_data):
             ratio = heart_rate / breath_rate
             if not (HEART_BREATH_RATIO_MIN <= ratio <= HEART_BREATH_RATIO_MAX):
                 logger.warning(f"Razão heart_rate/breath_rate fora do esperado: {ratio:.2f}")
-                # Não vamos ajustar automaticamente, apenas registrar o aviso
         
         # Obter serial_number dos dados ou usar valor padrão
-        serial_number = raw_data.get('serial_number', 'SERIAL_2')
+        serial_number = raw_data.get('serial_number', 'RADAR_1')
         
         # Montar dados convertidos
         converted_data = {
@@ -414,8 +413,7 @@ class DatabaseManager:
                 INSERT IGNORE INTO Dispositivos 
                 (serial_number, nome, tipo)
                 VALUES 
-                ('RADAR_1', 'Radar Principal', 'RADAR'),
-                ('SERIAL_2', 'Radar Gôndola', 'RADAR')
+                ('RADAR_1', 'Radar Gôndola Principal', 'RADAR')
             """)
             
             # Verificar tabela radar_dados
