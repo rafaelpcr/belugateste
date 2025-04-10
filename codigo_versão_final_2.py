@@ -327,12 +327,7 @@ db_config = {
     "database": os.getenv("DB_NAME", "Beluga_Analytics"),
     "port": int(os.getenv("DB_PORT", 3306)),
     "use_pure": True,
-    "ssl_disabled": True,
-    "pool_size": 5,
-    "pool_name": "mypool",
-    "connect_timeout": 60,
-    "connection_timeout": 60,
-    "time_zone": "+00:00"
+    "ssl_disabled": True
 }
 
 class DatabaseManager:
@@ -900,98 +895,119 @@ class DatabaseManager:
 
     def insert_radar_data(self, data):
         """Insere dados do radar no banco"""
-        try:
-            logger.info("="*50)
-            logger.info("Iniciando inserção de dados no banco...")
-            logger.info(f"Dados recebidos: {data}")
-            
-            # Verificar campos obrigatórios
-            required_fields = ['x_point', 'y_point', 'move_speed']
-            for field in required_fields:
-                if field not in data:
-                    logger.error(f"Campo obrigatório ausente: {field}")
-                    return False
-            
-            # Garantir valores padrão para campos que podem estar ausentes
-            if 'satisfaction_score' not in data or data['satisfaction_score'] is None:
-                data['satisfaction_score'] = 0.0
+        max_retries = 3
+        retry_delay = 2  # segundos
+        
+        for attempt in range(max_retries):
+            try:
+                logger.info("="*50)
+                logger.info("Iniciando inserção de dados no banco...")
+                logger.info(f"Dados recebidos: {data}")
                 
-            if 'satisfaction_class' not in data or data['satisfaction_class'] is None:
-                data['satisfaction_class'] = 'NEUTRA'
+                # Verificar campos obrigatórios
+                required_fields = ['x_point', 'y_point', 'move_speed']
+                for field in required_fields:
+                    if field not in data:
+                        logger.error(f"Campo obrigatório ausente: {field}")
+                        return False
                 
-            if 'is_engaged' not in data or data['is_engaged'] is None:
-                data['is_engaged'] = False
+                # Garantir valores padrão para campos que podem estar ausentes
+                if 'satisfaction_score' not in data or data['satisfaction_score'] is None:
+                    data['satisfaction_score'] = 0.0
+                    
+                if 'satisfaction_class' not in data or data['satisfaction_class'] is None:
+                    data['satisfaction_class'] = 'NEUTRA'
+                    
+                if 'is_engaged' not in data or data['is_engaged'] is None:
+                    data['is_engaged'] = False
+                    
+                if 'engagement_duration' not in data or data['engagement_duration'] is None:
+                    data['engagement_duration'] = 0
+                    
+                # Verificar se já existe uma sessão ativa
+                timestamp = data.get('timestamp', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                active_session = self.get_active_session(
+                    float(data.get('x_point')),
+                    float(data.get('y_point')),
+                    float(data.get('move_speed')),
+                    timestamp
+                )
                 
-            if 'engagement_duration' not in data or data['engagement_duration'] is None:
-                data['engagement_duration'] = 0
+                # Usar sessão existente ou criar nova
+                if active_session:
+                    data['session_id'] = active_session
+                    logger.info(f"Usando sessão existente: {active_session}")
+                elif 'session_id' not in data or data['session_id'] is None:
+                    data['session_id'] = str(uuid.uuid4())
+                    logger.info(f"Novo session_id gerado: {data['session_id']}")
+                    
+                if 'section_id' not in data or data['section_id'] is None:
+                    data['section_id'] = 1
+                    
+                if 'product_id' not in data or data['product_id'] is None:
+                    data['product_id'] = 'UNKNOWN'
+                    
+                if 'serial_number' not in data or data['serial_number'] is None:
+                    data['serial_number'] = 'RADAR_1'
                 
-            # Verificar se já existe uma sessão ativa
-            timestamp = data.get('timestamp', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-            active_session = self.get_active_session(
-                float(data.get('x_point')),
-                float(data.get('y_point')),
-                float(data.get('move_speed')),
-                timestamp
-            )
-            
-            # Usar sessão existente ou criar nova
-            if active_session:
-                data['session_id'] = active_session
-                logger.info(f"Usando sessão existente: {active_session}")
-            elif 'session_id' not in data or data['session_id'] is None:
-                data['session_id'] = str(uuid.uuid4())
-                logger.info(f"Novo session_id gerado: {data['session_id']}")
+                # Verificar conexão antes de inserir
+                if not self.conn or not self.conn.is_connected():
+                    logger.info("Reconectando ao banco de dados...")
+                    self.connect_with_retry()
                 
-            if 'section_id' not in data or data['section_id'] is None:
-                data['section_id'] = 1
+                # Query de inserção
+                query = """
+                    INSERT INTO radar_dados
+                    (x_point, y_point, move_speed, heart_rate, breath_rate, 
+                    satisfaction_score, satisfaction_class, is_engaged, engagement_duration, 
+                    session_id, section_id, product_id, timestamp, serial_number)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
                 
-            if 'product_id' not in data or data['product_id'] is None:
-                data['product_id'] = 'UNKNOWN'
+                # Preparar parâmetros
+                params = (
+                    float(data.get('x_point')),
+                    float(data.get('y_point')),
+                    float(data.get('move_speed')),
+                    float(data.get('heart_rate')) if data.get('heart_rate') is not None else None,
+                    float(data.get('breath_rate')) if data.get('breath_rate') is not None else None,
+                    float(data.get('satisfaction_score', 0)),
+                    data.get('satisfaction_class', 'NEUTRA'),
+                    bool(data.get('is_engaged', False)),
+                    int(data.get('engagement_duration', 0)),
+                    data['session_id'],
+                    int(data.get('section_id', 1)),
+                    data.get('product_id', 'UNKNOWN'),
+                    data.get('timestamp', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                    data.get('serial_number', 'RADAR_1')
+                )
                 
-            if 'serial_number' not in data or data['serial_number'] is None:
-                data['serial_number'] = 'RADAR_1'
-            
-            # Query de inserção
-            query = """
-                INSERT INTO radar_dados
-                (x_point, y_point, move_speed, heart_rate, breath_rate, 
-                satisfaction_score, satisfaction_class, is_engaged, engagement_duration, 
-                session_id, section_id, product_id, timestamp, serial_number)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            
-            # Preparar parâmetros
-            params = (
-                float(data.get('x_point')),
-                float(data.get('y_point')),
-                float(data.get('move_speed')),
-                float(data.get('heart_rate')) if data.get('heart_rate') is not None else None,
-                float(data.get('breath_rate')) if data.get('breath_rate') is not None else None,
-                float(data.get('satisfaction_score', 0)),
-                data.get('satisfaction_class', 'NEUTRA'),
-                bool(data.get('is_engaged', False)),
-                int(data.get('engagement_duration', 0)),
-                data['session_id'],  # Agora garantimos que sempre terá um valor
-                int(data.get('section_id', 1)),
-                data.get('product_id', 'UNKNOWN'),
-                data.get('timestamp', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                data.get('serial_number', 'RADAR_1')
-            )
-            
-            logger.info(f"Query: {query}")
-            logger.info(f"Parâmetros: {params}")
-            
-            # Executar inserção
-            self.cursor.execute(query, params)
-            self.conn.commit()
-            
-            logger.info("✅ Dados inseridos com sucesso!")
-            return True
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao inserir dados: {str(e)}")
-            logger.error(traceback.format_exc())
-            return False
+                logger.info(f"Executando query: {query}")
+                logger.info(f"Parâmetros: {params}")
+                
+                # Executar inserção com retry em caso de deadlock
+                try:
+                    self.cursor.execute(query, params)
+                    self.conn.commit()
+                    logger.info("✅ Dados inseridos com sucesso!")
+                    return True
+                except mysql.connector.errors.DatabaseError as e:
+                    if e.errno == 1205 and attempt < max_retries - 1:  # Lock timeout error
+                        logger.warning(f"Lock timeout na tentativa {attempt + 1}, tentando novamente em {retry_delay} segundos...")
+                        time.sleep(retry_delay)
+                        continue
+                    raise
+                    
+            except Exception as e:
+                logger.error(f"❌ Erro ao inserir dados: {str(e)}")
+                logger.error(traceback.format_exc())
+                if attempt < max_retries - 1:
+                    logger.info(f"Tentando novamente em {retry_delay} segundos...")
+                    time.sleep(retry_delay)
+                    continue
+                return False
+                
+        return False
 
 # Instância global do gerenciador de banco de dados
 try:
@@ -1963,7 +1979,7 @@ zone_manager = ZoneManager()
 area_manager = AreaManager()
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 3000))
+    port = int(os.getenv("PORT", 3001))  # Alterado de 3000 para 3001
     host = os.getenv("HOST", "0.0.0.0")
     
     print("\n" + "="*50)
