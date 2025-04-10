@@ -1979,7 +1979,7 @@ zone_manager = ZoneManager()
 area_manager = AreaManager()
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 3001))  # Alterado de 3000 para 3001
+    port = int(os.getenv("PORT", 3000))
     host = os.getenv("HOST", "0.0.0.0")
     
     print("\n" + "="*50)
