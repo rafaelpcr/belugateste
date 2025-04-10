@@ -924,6 +924,18 @@ class DatabaseManager:
                 if 'engagement_duration' not in data or data['engagement_duration'] is None:
                     data['engagement_duration'] = 0
                     
+                if 'serial_number' not in data or data['serial_number'] is None:
+                    data['serial_number'] = 'RADAR_1'
+
+                # Garantir que o dispositivo existe
+                self.cursor.execute("""
+                    INSERT IGNORE INTO Dispositivos 
+                    (serial_number, nome, tipo)
+                    VALUES 
+                    (%s, %s, %s)
+                """, (data['serial_number'], f"Radar {data['serial_number']}", 'RADAR'))
+                self.conn.commit()
+                    
                 # Verificar se já existe uma sessão ativa
                 timestamp = data.get('timestamp', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
                 active_session = self.get_active_session(
@@ -946,9 +958,6 @@ class DatabaseManager:
                     
                 if 'product_id' not in data or data['product_id'] is None:
                     data['product_id'] = 'UNKNOWN'
-                    
-                if 'serial_number' not in data or data['serial_number'] is None:
-                    data['serial_number'] = 'RADAR_1'
                 
                 # Verificar conexão antes de inserir
                 if not self.conn or not self.conn.is_connected():
@@ -982,7 +991,7 @@ class DatabaseManager:
                     data.get('serial_number', 'RADAR_1')
                 )
                 
-                logger.info(f"Executando query: {query}")
+                logger.info(f"Query: {query}")
                 logger.info(f"Parâmetros: {params}")
                 
                 # Executar inserção com retry em caso de deadlock
