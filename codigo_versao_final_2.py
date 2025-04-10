@@ -32,16 +32,16 @@ def convert_radar_data(raw_data):
         logger.debug(f"Convertendo dados brutos: {raw_data}")
         
         # Constantes para validação
-        HEART_RATE_MIN = 60
-        HEART_RATE_MAX = 100
-        BREATH_RATE_MIN = 12
-        BREATH_RATE_MAX = 20
+        HEART_RATE_MIN = 40  # Ajustado para ser mais realista
+        HEART_RATE_MAX = 180 # Ajustado para ser mais realista
+        BREATH_RATE_MIN = 8  # Ajustado para ser mais realista
+        BREATH_RATE_MAX = 30 # Ajustado para ser mais realista
         MOVE_SPEED_MIN = 0
-        MOVE_SPEED_MAX = 100  # Reduzido para 1 m/s
+        MOVE_SPEED_MAX = 200  # Aumentado para 2 m/s
         COORD_MIN = -2  # -2 metros
         COORD_MAX = 2   # 2 metros
-        HEART_BREATH_RATIO_MIN = 3.0
-        HEART_BREATH_RATIO_MAX = 6.0  # Aumentado para 6.0 para ser mais flexível
+        HEART_BREATH_RATIO_MIN = 2.0  # Ajustado para ser mais realista
+        HEART_BREATH_RATIO_MAX = 7.0  # Ajustado para ser mais realista
         
         # Processar e validar coordenadas
         try:
@@ -81,48 +81,52 @@ def convert_radar_data(raw_data):
             
         # Processar e validar heart_rate
         try:
-            heart_rate = float(raw_data.get('heart_rate', 0))
-            
-            # Validar valores absurdos
-            if heart_rate > 300 or heart_rate < 0:
-                logger.warning(f"Heart rate inválido: {heart_rate}, descartando")
-                heart_rate = None
-            # Validar faixa normal
-            elif not (HEART_RATE_MIN <= heart_rate <= HEART_RATE_MAX):
-                logger.warning(f"Heart rate fora da faixa aceitável: {heart_rate} bpm")
-                if heart_rate < HEART_RATE_MIN:
-                    heart_rate = HEART_RATE_MIN
-                elif heart_rate > HEART_RATE_MAX:
-                    heart_rate = HEART_RATE_MAX
-            
-            # Arredondar para número inteiro
+            heart_rate = raw_data.get('heart_rate')
             if heart_rate is not None:
-                heart_rate = round(heart_rate)
+                heart_rate = float(heart_rate)
                 
+                # Validar valores absurdos
+                if heart_rate > 300 or heart_rate < 0:
+                    logger.warning(f"Heart rate inválido: {heart_rate}, descartando")
+                    heart_rate = None
+                # Validar faixa normal
+                elif not (HEART_RATE_MIN <= heart_rate <= HEART_RATE_MAX):
+                    logger.warning(f"Heart rate fora da faixa aceitável: {heart_rate} bpm")
+                    if heart_rate < HEART_RATE_MIN:
+                        heart_rate = HEART_RATE_MIN
+                    elif heart_rate > HEART_RATE_MAX:
+                        heart_rate = HEART_RATE_MAX
+                
+                # Arredondar para número inteiro
+                if heart_rate is not None:
+                    heart_rate = round(heart_rate)
+                    
         except (ValueError, TypeError) as e:
             logger.error(f"Erro ao converter heart_rate: {str(e)}")
             heart_rate = None
         
         # Processar e validar breath_rate
         try:
-            breath_rate = float(raw_data.get('breath_rate', 0))
-            
-            # Validar valores absurdos
-            if breath_rate > 60 or breath_rate < 0:
-                logger.warning(f"Breath rate inválido: {breath_rate}, descartando")
-                breath_rate = None
-            # Validar faixa normal
-            elif not (BREATH_RATE_MIN <= breath_rate <= BREATH_RATE_MAX):
-                logger.warning(f"Breath rate fora da faixa aceitável: {breath_rate} rpm")
-                if breath_rate < BREATH_RATE_MIN:
-                    breath_rate = BREATH_RATE_MIN
-                elif breath_rate > BREATH_RATE_MAX:
-                    breath_rate = BREATH_RATE_MAX
-            
-            # Arredondar para número inteiro
+            breath_rate = raw_data.get('breath_rate')
             if breath_rate is not None:
-                breath_rate = round(breath_rate)
+                breath_rate = float(breath_rate)
                 
+                # Validar valores absurdos
+                if breath_rate > 60 or breath_rate < 0:
+                    logger.warning(f"Breath rate inválido: {breath_rate}, descartando")
+                    breath_rate = None
+                # Validar faixa normal
+                elif not (BREATH_RATE_MIN <= breath_rate <= BREATH_RATE_MAX):
+                    logger.warning(f"Breath rate fora da faixa aceitável: {breath_rate} rpm")
+                    if breath_rate < BREATH_RATE_MIN:
+                        breath_rate = BREATH_RATE_MIN
+                    elif breath_rate > BREATH_RATE_MAX:
+                        breath_rate = BREATH_RATE_MAX
+                
+                # Arredondar para número inteiro
+                if breath_rate is not None:
+                    breath_rate = round(breath_rate)
+                    
         except (ValueError, TypeError) as e:
             logger.error(f"Erro ao converter breath_rate: {str(e)}")
             breath_rate = None
@@ -131,17 +135,21 @@ def convert_radar_data(raw_data):
         if heart_rate is not None and breath_rate is not None and breath_rate > 0:
             ratio = heart_rate / breath_rate
             if not (HEART_BREATH_RATIO_MIN <= ratio <= HEART_BREATH_RATIO_MAX):
-                logger.warning(f"Razão heart_rate/breath_rate alta mas aceitável: {ratio:.2f}")
+                logger.warning(f"Razão heart_rate/breath_rate fora do esperado: {ratio:.2f}")
+                # Não vamos ajustar automaticamente, apenas registrar o aviso
+        
+        # Obter serial_number dos dados ou usar valor padrão
+        serial_number = raw_data.get('serial_number', 'SERIAL_2')
         
         # Montar dados convertidos
         converted_data = {
-            'device_id': 'SERIAL_2',
+            'device_id': serial_number,
             'x_point': x_point,
             'y_point': y_point,
             'move_speed': move_speed,
             'heart_rate': heart_rate,
             'breath_rate': breath_rate,
-            'serial_number': raw_data.get('serial_number', 'SERIAL_2')
+            'serial_number': serial_number
         }
         
         # Log detalhado dos dados processados
@@ -199,24 +207,38 @@ class ShelfManager:
         Retorna: dict com informações da seção ou None se não encontrar
         """
         try:
-            # Buscar seções ativas que contenham o ponto (x, y)
+            # Adicionar margem de tolerância para detecção da seção
+            MARGIN = 0.05  # 5cm de margem
+            
+            # Buscar seções ativas que contenham o ponto (x, y) com margem de tolerância
             query = """
-                SELECT id as section_id, section_name as name, product_id
+                SELECT id as section_id, section_name as name, product_id,
+                       x_start, x_end, y_start, y_end
                 FROM shelf_sections
                 WHERE is_active = TRUE
-                AND x_start <= %s AND x_end >= %s
-                AND y_start <= %s AND y_end >= %s
+                AND x_start - %s <= %s AND x_end + %s >= %s
+                AND y_start - %s <= %s AND y_end + %s >= %s
+                ORDER BY ABS(x_start - %s) + ABS(y_start - %s)
                 LIMIT 1
             """
             
-            db_manager.cursor.execute(query, (x, x, y, y))
+            params = (MARGIN, x, MARGIN, x, MARGIN, y, MARGIN, y, x, y)
+            
+            db_manager.cursor.execute(query, params)
             section = db_manager.cursor.fetchone()
             
             if section:
-                logger.info(f"Seção encontrada: {section['name']} (Produto: {section['product_id']})")
+                # Calcular distância do ponto ao centro da seção
+                center_x = (section['x_start'] + section['x_end']) / 2
+                center_y = (section['y_start'] + section['y_end']) / 2
+                distance = ((x - center_x) ** 2 + (y - center_y) ** 2) ** 0.5
+                
+                logger.info(f"✅ Seção encontrada: {section['name']} (Produto: {section['product_id']})")
+                logger.info(f"   Distância ao centro: {distance:.2f}m")
+                logger.info(f"   Coordenadas da seção: x=[{section['x_start']:.2f}, {section['x_end']:.2f}], y=[{section['y_start']:.2f}, {section['y_end']:.2f}]")
                 return section
             else:
-                logger.info(f"Nenhuma seção encontrada para as coordenadas (x={x}, y={y})")
+                logger.info(f"❌ Nenhuma seção encontrada para as coordenadas (x={x}, y={y})")
                 return None
                 
         except Exception as e:
@@ -525,8 +547,9 @@ class DatabaseManager:
                     INSERT INTO shelf_sections 
                     (section_name, x_start, y_start, x_end, y_end, product_id, product_name)
                     VALUES 
-                    ('Sagatiba', 0.0, 0.0, 0.5, 0.3, 'SAGATIBA001', 'Sagatiba'),
-                    ('Skyy', 0.5, 0.0, 1.0, 0.3, 'SKYY001', 'Skyy')
+                    ('Granolas Premium', -0.75, 0.0, -0.25, 0.3, 'GRN001', 'Granolas Premium'),
+                    ('Mix de Frutas Secas', -0.25, 0.0, 0.25, 0.3, 'MIX001', 'Mix de Frutas Secas'),
+                    ('Barras de Cereais', 0.25, 0.0, 0.75, 0.3, 'BAR001', 'Barras de Cereais')
                 """)
             
             # Verificar se já existem zonas
@@ -1053,54 +1076,54 @@ class AnalyticsManager:
         self.engagement_start_time = None
         self.last_movement_time = None
 
-    def calculate_satisfaction(self, heart_rate, breath_rate):
+    def calculate_satisfaction_score(self, move_speed, heart_rate, breath_rate):
         """
-        Calcula nível de satisfação baseado em batimentos cardíacos e respiração
-        Retorna: score (0-100) e classificação ('POSITIVA', 'NEUTRA', 'NEGATIVA')
+        Calcula o score de satisfação baseado nas métricas do radar
+        Retorna: (score, classificação)
         """
-        if heart_rate is None or breath_rate is None:
-            return {
-                'score': 50,
-                'classification': 'NEUTRA',
-                'heart_score': 50,
-                'resp_score': 50,
-                'is_valid': False
+        try:
+            # Normalizar as métricas para uma escala de 0-1
+            move_speed_norm = min(1.0, move_speed / 20.0)  # Velocidade máxima considerada: 20
+            heart_rate_norm = max(0.0, min(1.0, (heart_rate - 60) / 40))  # Faixa normal: 60-100 bpm
+            breath_rate_norm = max(0.0, min(1.0, (breath_rate - 12) / 8))  # Faixa normal: 12-20 rpm
+            
+            # Pesos para cada métrica
+            WEIGHTS = {
+                'move_speed': 0.5,    # Velocidade tem maior peso
+                'heart_rate': 0.3,    # Frequência cardíaca tem peso médio
+                'breath_rate': 0.2    # Respiração tem menor peso
             }
-
-        # Cálculo do score cardíaco
-        heart_deviation = abs(heart_rate - self.HEART_RATE_IDEAL)
-        max_heart_deviation = self.HEART_RATE_MAX - self.HEART_RATE_IDEAL
-        heart_score = max(0, 100 * (1 - heart_deviation / max_heart_deviation))
-
-        # Cálculo do score respiratório
-        breath_deviation = abs(breath_rate - self.BREATH_RATE_IDEAL)
-        max_breath_deviation = self.BREATH_RATE_MAX - self.BREATH_RATE_IDEAL
-        resp_score = max(0, 100 * (1 - breath_deviation / max_breath_deviation))
-
-        # Score final ponderado
-        final_score = (self.WEIGHT_HEART_RATE * heart_score + 
-                      self.WEIGHT_RESP_RATE * resp_score)
-
-        # Classificação mais granular
-        if final_score >= 80:
-            classification = 'POSITIVA'
-        elif final_score >= 60:
-            classification = 'NEUTRA'
-        else:
-            classification = 'NEGATIVA'
-
-        logger.info(f"Cálculo de satisfação:")
-        logger.info(f"  - Heart Rate: {heart_rate} bpm (score: {heart_score:.2f})")
-        logger.info(f"  - Breath Rate: {breath_rate} rpm (score: {resp_score:.2f})")
-        logger.info(f"  - Score Final: {final_score:.2f} ({classification})")
-
-        return {
-            'score': round(final_score, 2),
-            'classification': classification,
-            'heart_score': round(heart_score, 2),
-            'resp_score': round(resp_score, 2),
-            'is_valid': True
-        }
+            
+            # Calcular score ponderado (0-100)
+            score = 100 * (
+                WEIGHTS['move_speed'] * (1 - move_speed_norm) +  # Menor velocidade = maior satisfação
+                WEIGHTS['heart_rate'] * (1 - heart_rate_norm) +  # Menor freq cardíaca = maior satisfação
+                WEIGHTS['breath_rate'] * (1 - breath_rate_norm)  # Menor freq respiratória = maior satisfação
+            )
+            
+            # Classificar o score
+            if score >= 80:
+                satisfaction_class = 'Muito Satisfeito'
+            elif score >= 60:
+                satisfaction_class = 'Satisfeito'
+            elif score >= 40:
+                satisfaction_class = 'Neutro'
+            elif score >= 20:
+                satisfaction_class = 'Insatisfeito'
+            else:
+                satisfaction_class = 'Muito Insatisfeito'
+                
+            logger.info(f"📊 Score de satisfação calculado:")
+            logger.info(f"   Score: {score:.1f}/100")
+            logger.info(f"   Classificação: {satisfaction_class}")
+            logger.info(f"   Métricas normalizadas: movimento={move_speed_norm:.2f}, cardíaca={heart_rate_norm:.2f}, respiração={breath_rate_norm:.2f}")
+            
+            return score, satisfaction_class
+            
+        except Exception as e:
+            logger.error(f"❌ Erro ao calcular satisfação: {str(e)}")
+            logger.error(traceback.format_exc())
+            return 50, 'Neutro'  # Valor padrão em caso de erro
 
     def calculate_engagement(self, records):
         """
@@ -1635,17 +1658,18 @@ def receive_radar_data():
         converted_data['engagement_duration'] = engagement_duration
         
         # Calcular satisfação
-        satisfaction_data = analytics_manager.calculate_satisfaction(
-            converted_data.get('heart_rate'), 
+        satisfaction_data = analytics_manager.calculate_satisfaction_score(
+            converted_data.get('move_speed'),
+            converted_data.get('heart_rate'),
             converted_data.get('breath_rate')
         )
         
-        converted_data['satisfaction_score'] = satisfaction_data['score']
-        converted_data['satisfaction_class'] = satisfaction_data['classification']
+        converted_data['satisfaction_score'] = satisfaction_data[0]
+        converted_data['satisfaction_class'] = satisfaction_data[1]
         
         # Log dos dados calculados
         logger.info(f"Dados de engajamento: engajado={is_engaged}, duração={engagement_duration}s")
-        logger.info(f"Dados de satisfação: score={satisfaction_data['score']}, class={satisfaction_data['classification']}")
+        logger.info(f"Dados de satisfação: score={satisfaction_data[0]}, class={satisfaction_data[1]}")
         
         # Inserir dados no banco
         success = db_manager.insert_radar_data(converted_data)
