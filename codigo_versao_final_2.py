@@ -135,13 +135,13 @@ def convert_radar_data(raw_data):
         
         # Montar dados convertidos
         converted_data = {
-            'device_id': 'RADAR_1',
+            'device_id': 'SERIAL_2',
             'x_point': x_point,
             'y_point': y_point,
             'move_speed': move_speed,
             'heart_rate': heart_rate,
             'breath_rate': breath_rate,
-            'serial_number': raw_data.get('serial_number', 'RADAR_1')
+            'serial_number': raw_data.get('serial_number', 'SERIAL_2')
         }
         
         # Log detalhado dos dados processados
@@ -392,7 +392,8 @@ class DatabaseManager:
                 INSERT IGNORE INTO Dispositivos 
                 (serial_number, nome, tipo)
                 VALUES 
-                ('RADAR_1', 'Radar Principal', 'RADAR')
+                ('RADAR_1', 'Radar Principal', 'RADAR'),
+                ('SERIAL_2', 'Radar Gôndola', 'RADAR')
             """)
             
             # Verificar tabela radar_dados
@@ -925,7 +926,7 @@ class DatabaseManager:
                     data['engagement_duration'] = 0
                     
                 if 'serial_number' not in data or data['serial_number'] is None:
-                    data['serial_number'] = 'RADAR_1'
+                    data['serial_number'] = 'SERIAL_2'
 
                 # Garantir que o dispositivo existe
                 self.cursor.execute("""
