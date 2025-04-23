@@ -1,7 +1,6 @@
-import mysql.connector
+import json
 from datetime import datetime, timedelta
 import logging
-import json
 import os
 from dotenv import load_dotenv
 import traceback
@@ -11,6 +10,13 @@ import uuid
 import serial
 import threading
 import re
+from flask import Flask, jsonify
+from flask_cors import CORS
+import colorama
+from colorama import Fore, Back, Style
+
+# Inicializar colorama para Windows
+colorama.init()
 
 # Configuração básica de logging
 logging.basicConfig(
@@ -25,6 +31,20 @@ logger = logging.getLogger('radar_serial_app')
 
 # Carregar variáveis de ambiente
 load_dotenv()
+
+# Criar aplicação Flask
+app = Flask(__name__)
+CORS(app)  # Habilitar CORS para todas as rotas
+
+# Variáveis globais para monitoramento
+last_received_data = None
+system_status = {
+    'is_running': False,
+    'port': None,
+    'last_data_time': None,
+    'total_readings': 0,
+    'errors': 0
+}
 
 # Constante para conversão do índice Doppler para velocidade
 RANGE_STEP = 2.5  # Valor do RANGE_STEP do código ESP32/Arduino
@@ -122,286 +142,338 @@ def convert_radar_data(raw_data):
         logger.error(traceback.format_exc())
         return None
 
-class ShelfManager:
-    def __init__(self):
-        # Constantes para mapeamento de seções
-        self.SECTION_WIDTH = 0.5  # Largura de cada seção em metros
-        self.SECTION_HEIGHT = 0.3  # Altura de cada seção em metros
-        self.MAX_SECTIONS_X = 4    # Número máximo de seções na horizontal
-        self.MAX_SECTIONS_Y = 3    # Número máximo de seções na vertical
-        
-    def initialize_database(self, db_manager):
-        """Inicializa a tabela de seções da gôndola"""
+class FileDataManager:
+    def __init__(self, data_file='radar_data.json'):
+        self.data_file = data_file
+        self.data = {
+            'radar_dados': [],
+            'shelf_sections': []
+        }
+        self.load_data()
+        self.last_processed_data = None
+
+    def load_data(self):
+        """Carrega dados do arquivo se ele existir"""
         try:
-            # Criar tabela para seções da gôndola
-            db_manager.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS shelf_sections (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    section_name VARCHAR(50),
-                    x_start FLOAT,
-                    y_start FLOAT,
-                    x_end FLOAT,
-                    y_end FLOAT,
-                    product_id VARCHAR(50),
-                    product_name VARCHAR(100),
-                    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    is_active BOOLEAN DEFAULT TRUE
-                )
-            """)
-            db_manager.conn.commit()
-            logger.info("✅ Tabela shelf_sections criada/verificada com sucesso!")
-            
+            if os.path.exists(self.data_file):
+                with open(self.data_file, 'r') as f:
+                    self.data = json.load(f)
         except Exception as e:
-            logger.error(f"❌ Erro ao inicializar tabela shelf_sections: {str(e)}")
-            logger.error(traceback.format_exc())
-            raise
-            
-    def get_section_at_position(self, x, y, db_manager):
-        """Identifica a seção baseada nas coordenadas (x, y)"""
+            logger.error(f"Erro ao carregar dados do arquivo: {str(e)}")
+
+    def save_data(self):
+        """Salva dados no arquivo"""
         try:
-            query = """
-                SELECT id, section_name, product_id, x_start, x_end, y_start, y_end 
-                FROM shelf_sections 
-                WHERE x_start <= %s AND x_end >= %s 
-                AND y_start <= %s AND y_end >= %s 
-                AND is_active = TRUE
-            """
-            db_manager.cursor.execute(query, (x, x, y, y))
-            result = db_manager.cursor.fetchone()
+            with open(self.data_file, 'w') as f:
+                json.dump(self.data, f, indent=2)
+        except Exception as e:
+            logger.error(f"Erro ao salvar dados no arquivo: {str(e)}")
+
+    def insert_radar_data(self, data):
+        """Insere dados do radar no arquivo"""
+        try:
+            # Adicionar ID único e timestamp
+            data['id'] = str(uuid.uuid4())
+            if 'timestamp' not in data:
+                data['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+            # Atualizar dados de monitoramento
+            global last_received_data, system_status
+            last_received_data = data
+            system_status['last_data_time'] = data['timestamp']
+            system_status['total_readings'] += 1
+            self.last_processed_data = data
+
+            # Adicionar aos dados existentes
+            self.data['radar_dados'].append(data)
             
-            if result:
-                return {
-                    'section_id': result[0],
-                    'section_name': result[1],
-                    'product_id': result[2],
-                    'x_start': result[3],
-                    'x_end': result[4],
-                    'y_start': result[5],
-                    'y_end': result[6]
-                }
+            # Salvar no arquivo
+            self.save_data()
+            logger.info("✅ Dados salvos com sucesso no arquivo!")
+            return True
+        except Exception as e:
+            system_status['errors'] += 1
+            logger.error(f"❌ Erro ao salvar dados: {str(e)}")
+            return False
+
+    def get_section_at_position(self, x, y):
+        """Busca seção baseada nas coordenadas (x, y)"""
+        try:
+            for section in self.data['shelf_sections']:
+                if (section['x_start'] <= x <= section['x_end'] and
+                    section['y_start'] <= y <= section['y_end'] and
+                    section.get('is_active', True)):
+                    return section
             return None
-            
         except Exception as e:
             logger.error(f"Erro ao buscar seção: {str(e)}")
             return None
+
+    def get_last_n_readings(self, n=10):
+        """Retorna as últimas N leituras"""
+        return self.data['radar_dados'][-n:]
+
+class SerialRadarManager:
+    def __init__(self, port=None, baudrate=115200):
+        self.port = port or self.find_serial_port()
+        self.baudrate = baudrate
+        self.serial_connection = None
+        self.is_running = False
+        self.receive_thread = None
+        self.data_manager = None
+        self.analytics_manager = AnalyticsManager()
+        self.display_thread = None
         
-    def add_section(self, section_data, db_manager):
-        """
-        Adiciona uma nova seção à gôndola
-        section_data: dict com section_name, x_start, y_start, x_end, y_end, product_id, product_name
-        """
+        # Atualizar status do sistema
+        global system_status
+        system_status['port'] = self.port
+
+    def find_serial_port(self):
+        """Tenta encontrar a porta serial do dispositivo automaticamente"""
+        import serial.tools.list_ports
+        
+        # Listar todas as portas seriais disponíveis
+        ports = list(serial.tools.list_ports.comports())
+        if not ports:
+            logger.error("Nenhuma porta serial encontrada!")
+            return None
+            
+        # Procurar por portas que pareçam ser dispositivos ESP32, Arduino ou Raspberry Pi
+        for port in ports:
+            # Verificar descritores comuns
+            desc_lower = port.description.lower()
+            if any(term in desc_lower for term in 
+                  ['usb', 'serial', 'uart', 'cp210', 'ch340', 'ft232', 'arduino', 
+                   'esp32', 'raspberry', 'rpi', 'ttyacm', 'ttyusb']):
+                logger.info(f"Porta serial encontrada: {port.device} ({port.description})")
+                return port.device
+                
+        # Se não encontrou nenhuma específica, usar a primeira da lista
+        logger.info(f"Usando primeira porta serial disponível: {ports[0].device}")
+        return ports[0].device
+    
+    def connect(self):
+        """Estabelece conexão com a porta serial"""
+        if not self.port:
+            logger.error("Porta serial não especificada!")
+            return False
+            
         try:
-            query = """
-                INSERT INTO shelf_sections
-                (section_name, x_start, y_start, x_end, y_end, product_id, product_name)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """
-            
-            params = (
-                section_data['section_name'],
-                section_data['x_start'],
-                section_data['y_start'],
-                section_data['x_end'],
-                section_data['y_end'],
-                section_data['product_id'],
-                section_data['product_name']
-            )
-            
-            db_manager.cursor.execute(query, params)
-            db_manager.conn.commit()
-            
-            logger.info(f"✅ Seção {section_data['section_name']} adicionada com sucesso!")
+            logger.info(f"Conectando à porta serial {self.port} (baudrate: {self.baudrate})...")
+            self.serial_connection = serial.Serial(self.port, self.baudrate, timeout=1)
+            # Pequeno delay para garantir que a conexão esteja estabilizada
+            time.sleep(2)
+            logger.info(f"✅ Conexão serial estabelecida com sucesso!")
             return True
-            
         except Exception as e:
-            logger.error(f"❌ Erro ao adicionar seção: {str(e)}")
+            logger.error(f"❌ Erro ao conectar à porta serial: {str(e)}")
             logger.error(traceback.format_exc())
             return False
             
-    def get_all_sections(self, db_manager):
-        """Retorna todas as seções ativas"""
-        try:
-            query = """
-                SELECT * FROM shelf_sections
-                WHERE is_active = TRUE
-                ORDER BY section_name
-            """
-            
-            db_manager.cursor.execute(query)
-            sections = db_manager.cursor.fetchall()
-            
-            return sections
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao buscar seções: {str(e)}")
-            logger.error(traceback.format_exc())
-            return []
-
-# Instância global do gerenciador de seções
-shelf_manager = ShelfManager()
-
-# Configurações do MySQL
-db_config = {
-    "host": os.getenv("DB_HOST", "168.75.89.11"),
-    "user": os.getenv("DB_USER", "belugaDB"),
-    "password": os.getenv("DB_PASSWORD", "Rpcr@300476"),
-    "database": os.getenv("DB_NAME", "Beluga_Analytics"),
-    "port": int(os.getenv("DB_PORT", 3306)),
-    "use_pure": True,
-    "ssl_disabled": True
-}
-
-class DatabaseManager:
-    def __init__(self):
-        self.conn = None
-        self.cursor = None
-        self.last_sequence = 0
-        self.last_move_speed = None
-        self.connect_with_retry()
-        
-    def connect_with_retry(self, max_attempts=5):
-        """Tenta conectar ao banco com retry"""
-        attempt = 0
-        while attempt < max_attempts:
+    def display_data_loop(self):
+        """Loop para exibir dados no terminal"""
+        last_id = None
+        while self.is_running:
             try:
-                attempt += 1
-                logger.info(f"Tentativa {attempt} de {max_attempts} para conectar ao banco...")
+                os.system('cls' if os.name == 'nt' else 'clear')
                 
-                if self.conn:
-                    try:
-                        self.conn.close()
-                    except:
-                        pass
+                # Cabeçalho
+                print(f"{Fore.CYAN}{'='*80}")
+                print(f"🔍 MONITOR DE DADOS DO RADAR - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                print(f"{'='*80}{Style.RESET_ALL}")
                 
-                self.conn = mysql.connector.connect(**db_config)
-                self.cursor = self.conn.cursor(dictionary=True, buffered=True)
+                # Status do Sistema
+                print(f"{Fore.GREEN}📡 Status do Sistema:")
+                print(f"   Porta: {self.port}")
+                print(f"   Baudrate: {self.baudrate}")
+                print(f"   Status: {'Rodando' if self.is_running else 'Parado'}")
+                print(f"   Total de Leituras: {system_status['total_readings']}")
+                print(f"   Erros: {system_status['errors']}{Style.RESET_ALL}")
+                print()
                 
-                # Testar conexão
-                self.cursor.execute("SELECT 1")
-                self.cursor.fetchone()
+                # Últimos Dados
+                if last_received_data:
+                    print(f"{Fore.YELLOW}📊 Última Leitura:")
+                    print(f"   Timestamp: {last_received_data['timestamp']}")
+                    print(f"   Posição: X={last_received_data['x_point']:.2f}, Y={last_received_data['y_point']:.2f}")
+                    print(f"   Velocidade: {last_received_data['move_speed']:.2f} cm/s")
+                    print(f"   Batimentos: {last_received_data['heart_rate']:.1f} bpm")
+                    print(f"   Respiração: {last_received_data['breath_rate']:.1f} rpm")
+                    print(f"   Satisfação: {last_received_data['satisfaction_score']:.1f} ({last_received_data['satisfaction_class']})")
+                    print(f"   Engajado: {'Sim' if last_received_data['is_engaged'] else 'Não'}{Style.RESET_ALL}")
+                else:
+                    print(f"{Fore.YELLOW}Aguardando dados...{Style.RESET_ALL}")
                 
-                logger.info("✅ Conexão estabelecida com sucesso!")
-                self.initialize_database()
-                return True
+                print(f"\n{Fore.CYAN}{'='*80}")
+                print(f"Pressione Ctrl+C para encerrar{Style.RESET_ALL}")
+                
+                time.sleep(0.5)  # Atualizar a cada 0.5 segundos
                 
             except Exception as e:
-                logger.error(f"❌ Tentativa {attempt} falhou: {str(e)}")
-                if attempt == max_attempts:
-                    logger.error("Todas as tentativas de conexão falharam!")
-                    raise
-                time.sleep(2)
-        return False
-
-    def initialize_database(self):
-        """Inicializa o banco de dados e cria as tabelas necessárias"""
-        try:
-            # Verificar tabela radar_dados
-            logger.info("Verificando tabela radar_dados...")
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS radar_dados (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    x_point FLOAT,
-                    y_point FLOAT,
-                    move_speed FLOAT,
-                    heart_rate FLOAT,
-                    breath_rate FLOAT,
-                    satisfaction_score FLOAT,
-                    satisfaction_class VARCHAR(20),
-                    is_engaged BOOLEAN,
-                    engagement_duration INT,
-                    session_id VARCHAR(36),
-                    section_id INT,
-                    product_id VARCHAR(20),
-                    timestamp DATETIME,
-                    serial_number VARCHAR(20)
-                )
-            """)
-            self.conn.commit()
-            logger.info("✅ Tabela radar_dados criada/verificada com sucesso!")
-
-            # Verificar tabela radar_sessoes
-            logger.info("Verificando tabela radar_sessoes...")
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS radar_sessoes (
-                    session_id VARCHAR(50) PRIMARY KEY,
-                    start_time DATETIME,
-                    end_time DATETIME,
-                    duration INT,
-                    avg_heart_rate FLOAT,
-                    avg_breath_rate FLOAT,
-                    avg_satisfaction FLOAT,
-                    satisfaction_class VARCHAR(20),
-                    is_engaged BOOLEAN,
-                    data_points INT
-                )
-            """)
-            self.conn.commit()
-            logger.info("✅ Tabela radar_sessoes criada/verificada com sucesso!")
-
-            # Verificar tabela shelf_sections
-            shelf_manager.initialize_database(self)
-            
-            logger.info("✅ Banco de dados inicializado com sucesso!")
-            return True
-
-        except Exception as e:
-            logger.error(f"❌ Erro ao inicializar banco: {str(e)}")
+                logger.error(f"Erro ao exibir dados: {str(e)}")
+                time.sleep(1)
+    
+    def start(self, data_manager):
+        """Inicia o receptor de dados seriais em uma thread separada"""
+        self.data_manager = data_manager
+        
+        if not self.connect():
             return False
-
-    def insert_radar_data(self, data, attempt=0, max_retries=3, retry_delay=1):
-        """Insere dados do radar no banco de dados"""
-        try:
-            # Query de inserção
-            query = """
-                INSERT INTO radar_dados
-                (x_point, y_point, move_speed, heart_rate, breath_rate, 
-                satisfaction_score, satisfaction_class, is_engaged, engagement_duration, 
-                session_id, section_id, product_id, timestamp, serial_number)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
             
-            # Preparar parâmetros
-            params = (
-                float(data.get('x_point')),
-                float(data.get('y_point')),
-                float(data.get('move_speed')),
-                float(data.get('heart_rate')) if data.get('heart_rate') is not None else None,
-                float(data.get('breath_rate')) if data.get('breath_rate') is not None else None,
-                float(data.get('satisfaction_score', 0)),
-                data.get('satisfaction_class', 'NEUTRA'),
-                bool(data.get('is_engaged', False)),
-                int(data.get('engagement_duration', 0)),
-                data.get('session_id'),
-                int(data.get('section_id', 1)) if data.get('section_id') else None,
-                data.get('product_id', 'UNKNOWN'),
-                data.get('timestamp', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                data.get('serial_number', 'RADAR_1')
+        self.is_running = True
+        system_status['is_running'] = True
+        
+        # Iniciar thread de recepção de dados
+        self.receive_thread = threading.Thread(target=self.receive_data_loop)
+        self.receive_thread.daemon = True
+        self.receive_thread.start()
+        
+        # Iniciar thread de exibição
+        self.display_thread = threading.Thread(target=self.display_data_loop)
+        self.display_thread.daemon = True
+        self.display_thread.start()
+        
+        logger.info("Receptor de dados seriais iniciado!")
+        return True
+        
+    def stop(self):
+        """Para o receptor de dados seriais"""
+        self.is_running = False
+        system_status['is_running'] = False
+        
+        if self.serial_connection:
+            try:
+                self.serial_connection.close()
+            except:
+                pass
+                
+        if self.receive_thread and self.receive_thread.is_alive():
+            self.receive_thread.join(timeout=2)
+            
+        if self.display_thread and self.display_thread.is_alive():
+            self.display_thread.join(timeout=2)
+            
+        logger.info("Receptor de dados seriais parado!")
+
+    def receive_data_loop(self):
+        """Loop principal para receber e processar dados da porta serial"""
+        buffer = ""
+        message_mode = False
+        message_buffer = ""
+        target_data_complete = False
+        
+        while self.is_running:
+            try:
+                if not self.serial_connection.is_open:
+                    self.connect()
+                    time.sleep(1)
+                    continue
+                    
+                # Ler dados disponíveis
+                data = self.serial_connection.read(self.serial_connection.in_waiting or 1)
+                if data:
+                    text = data.decode('utf-8', errors='ignore')
+                    buffer += text
+                    
+                    # Verificar se temos linhas completas
+                    if '\n' in buffer:
+                        lines = buffer.split('\n')
+                        buffer = lines[-1]  # Manter o que sobrar após o último newline
+                        
+                        # Processar linhas completas
+                        for line in lines[:-1]:
+                            line = line.strip()
+                            
+                            # Início de uma mensagem de detecção
+                            if '-----Human Detected-----' in line:
+                                message_mode = True
+                                message_buffer = line + '\n'
+                                target_data_complete = False
+                            # Continuação da mensagem de detecção
+                            elif message_mode:
+                                message_buffer += line + '\n'
+                                
+                                # Verificar se a mensagem está completa
+                                if ('breath_rate:' in line or 'breath_rate:' in message_buffer):
+                                    target_data_complete = True
+                                
+                                # Verificar se temos outra detecção (novo Target) - fim da anterior
+                                if target_data_complete and (line.strip() == '' or 'Target' in line and line.startswith('Target')):
+                                    # Processar os dados coletados
+                                    self.process_radar_data(message_buffer)
+                                    
+                                    # Se for uma linha em branco, finalizar a mensagem
+                                    if line.strip() == '':
+                                        message_mode = False
+                                        message_buffer = ""
+                                        target_data_complete = False
+                                    # Se for outro Target, começar novo ciclo mas manter o modo
+                                    else:
+                                        message_buffer = line + '\n'
+                                        target_data_complete = False
+                            # Outras mensagens não relacionadas à detecção
+                            elif line:
+                                logger.debug(f"Mensagem: {line}")
+                                
+                # Pequena pausa para evitar consumo excessivo de CPU
+                time.sleep(0.01)
+                
+            except Exception as e:
+                logger.error(f"❌ Erro no loop de recepção: {str(e)}")
+                logger.error(traceback.format_exc())
+                time.sleep(1)  # Pausa para evitar spam de logs em caso de erro
+                
+    def process_radar_data(self, raw_data):
+        """Processa dados brutos do radar recebidos pela serial"""
+        try:
+            # Converter dados
+            converted_data = convert_radar_data(raw_data)
+            if not converted_data:
+                logger.warning("⚠️ Não foi possível extrair dados do radar desta mensagem")
+                return
+                
+            # Adicionar timestamp
+            current_time = datetime.now()
+            converted_data['timestamp'] = current_time.strftime('%Y-%m-%d %H:%M:%S')
+            
+            # Identificar seção baseado na posição
+            section = self.data_manager.get_section_at_position(
+                converted_data['x_point'],
+                converted_data['y_point']
             )
             
-            logger.info(f"Query: {query}")
-            logger.info(f"Parâmetros: {params}")
+            if section:
+                converted_data['section_id'] = section['id']
+                converted_data['product_id'] = section['product_id']
+            else:
+                converted_data['section_id'] = None
+                converted_data['product_id'] = None
+                
+            # Calcular satisfação
+            satisfaction_data = self.analytics_manager.calculate_satisfaction_score(
+                converted_data.get('move_speed'),
+                converted_data.get('heart_rate'),
+                converted_data.get('breath_rate')
+            )
             
-            # Executar inserção com retry em caso de deadlock
-            try:
-                self.cursor.execute(query, params)
-                self.conn.commit()
-                logger.info("✅ Dados inseridos com sucesso!")
-                return True
-            except mysql.connector.errors.DatabaseError as e:
-                if e.errno == 1205 and attempt < max_retries - 1:  # Lock timeout error
-                    logger.warning(f"Lock timeout na tentativa {attempt + 1}, tentando novamente em {retry_delay} segundos...")
-                    time.sleep(retry_delay)
-                    return self.insert_radar_data(data, attempt + 1, max_retries, retry_delay)
-                raise
+            converted_data['satisfaction_score'] = satisfaction_data[0]
+            converted_data['satisfaction_class'] = satisfaction_data[1]
+            
+            # Calcular engajamento
+            is_engaged = converted_data.get('move_speed', float('inf')) <= self.analytics_manager.MOVEMENT_THRESHOLD
+            converted_data['is_engaged'] = is_engaged
+            
+            # Salvar dados no arquivo
+            if self.data_manager:
+                success = self.data_manager.insert_radar_data(converted_data)
+                if not success:
+                    logger.error("❌ Falha ao salvar dados no arquivo")
+            else:
+                logger.warning("⚠️ Gerenciador de dados não disponível, dados não foram salvos")
                 
         except Exception as e:
-            logger.error(f"❌ Erro ao inserir dados: {str(e)}")
+            logger.error(f"Erro ao processar dados: {str(e)}")
             logger.error(traceback.format_exc())
-            if attempt < max_retries - 1:
-                logger.info(f"Tentando novamente em {retry_delay} segundos...")
-                time.sleep(retry_delay)
-                return self.insert_radar_data(data, attempt + 1, max_retries, retry_delay)
-            return False
 
 class AnalyticsManager:
     def __init__(self):
@@ -492,223 +564,61 @@ class AnalyticsManager:
             logger.error(traceback.format_exc())
             return 50, 'Neutro'  # Valor padrão em caso de erro
 
-class SerialRadarManager:
-    def __init__(self, port=None, baudrate=115200):
-        self.port = port or self.find_serial_port()
-        self.baudrate = baudrate
-        self.serial_connection = None
-        self.is_running = False
-        self.receive_thread = None
-        self.db_manager = None
-        self.analytics_manager = AnalyticsManager()
-        
-    def find_serial_port(self):
-        """Tenta encontrar a porta serial do dispositivo automaticamente"""
-        import serial.tools.list_ports
-        
-        # Listar todas as portas seriais disponíveis
-        ports = list(serial.tools.list_ports.comports())
-        if not ports:
-            logger.error("Nenhuma porta serial encontrada!")
-            return None
-            
-        # Procurar por portas que pareçam ser dispositivos ESP32, Arduino ou Raspberry Pi
-        for port in ports:
-            # Verificar descritores comuns
-            desc_lower = port.description.lower()
-            if any(term in desc_lower for term in 
-                  ['usb', 'serial', 'uart', 'cp210', 'ch340', 'ft232', 'arduino', 
-                   'esp32', 'raspberry', 'rpi', 'ttyacm', 'ttyusb']):
-                logger.info(f"Porta serial encontrada: {port.device} ({port.description})")
-                return port.device
-                
-        # Se não encontrou nenhuma específica, usar a primeira da lista
-        logger.info(f"Usando primeira porta serial disponível: {ports[0].device}")
-        return ports[0].device
+# Endpoints Flask para monitoramento
+@app.route('/status')
+def get_status():
+    """Retorna o status atual do sistema"""
+    return jsonify({
+        'status': 'online',
+        'system_info': system_status,
+        'last_reading': last_received_data
+    })
+
+@app.route('/data/latest/<int:n>')
+def get_latest_data(n=10):
+    """Retorna as últimas N leituras"""
+    if not hasattr(app, 'data_manager'):
+        return jsonify({'error': 'Sistema ainda não inicializado'}), 500
     
-    def connect(self):
-        """Estabelece conexão com a porta serial"""
-        if not self.port:
-            logger.error("Porta serial não especificada!")
-            return False
-            
-        try:
-            logger.info(f"Conectando à porta serial {self.port} (baudrate: {self.baudrate})...")
-            self.serial_connection = serial.Serial(self.port, self.baudrate, timeout=1)
-            # Pequeno delay para garantir que a conexão esteja estabilizada
-            time.sleep(2)
-            logger.info(f"✅ Conexão serial estabelecida com sucesso!")
-            return True
-        except Exception as e:
-            logger.error(f"❌ Erro ao conectar à porta serial: {str(e)}")
-            logger.error(traceback.format_exc())
-            return False
-            
-    def start(self, db_manager):
-        """Inicia o receptor de dados seriais em uma thread separada"""
-        self.db_manager = db_manager
-        
-        if not self.connect():
-            return False
-            
-        self.is_running = True
-        self.receive_thread = threading.Thread(target=self.receive_data_loop)
-        self.receive_thread.daemon = True
-        self.receive_thread.start()
-        
-        logger.info("Receptor de dados seriais iniciado!")
-        return True
-        
-    def stop(self):
-        """Para o receptor de dados seriais"""
-        self.is_running = False
-        
-        if self.serial_connection:
-            try:
-                self.serial_connection.close()
-            except:
-                pass
-                
-        if self.receive_thread and self.receive_thread.is_alive():
-            self.receive_thread.join(timeout=2)
-            
-        logger.info("Receptor de dados seriais parado!")
-        
-    def receive_data_loop(self):
-        """Loop principal para receber e processar dados da porta serial"""
-        buffer = ""
-        message_mode = False
-        message_buffer = ""
-        target_data_complete = False
-        
-        while self.is_running:
-            try:
-                if not self.serial_connection.is_open:
-                    self.connect()
-                    time.sleep(1)
-                    continue
-                    
-                # Ler dados disponíveis
-                data = self.serial_connection.read(self.serial_connection.in_waiting or 1)
-                if data:
-                    text = data.decode('utf-8', errors='ignore')
-                    buffer += text
-                    
-                    # Verificar se temos linhas completas
-                    if '\n' in buffer:
-                        lines = buffer.split('\n')
-                        buffer = lines[-1]  # Manter o que sobrar após o último newline
-                        
-                        # Processar linhas completas
-                        for line in lines[:-1]:
-                            line = line.strip()
-                            
-                            # Início de uma mensagem de detecção
-                            if '-----Human Detected-----' in line:
-                                message_mode = True
-                                message_buffer = line + '\n'
-                                target_data_complete = False
-                            # Continuação da mensagem de detecção
-                            elif message_mode:
-                                message_buffer += line + '\n'
-                                
-                                # Verificar se a mensagem está completa
-                                if ('breath_rate:' in line or 'breath_rate:' in message_buffer):
-                                    target_data_complete = True
-                                
-                                # Verificar se temos outra detecção (novo Target) - fim da anterior
-                                if target_data_complete and (line.strip() == '' or 'Target' in line and line.startswith('Target')):
-                                    # Processar os dados coletados
-                                    self.process_radar_data(message_buffer)
-                                    
-                                    # Se for uma linha em branco, finalizar a mensagem
-                                    if line.strip() == '':
-                                        message_mode = False
-                                        message_buffer = ""
-                                        target_data_complete = False
-                                    # Se for outro Target, começar novo ciclo mas manter o modo
-                                    else:
-                                        message_buffer = line + '\n'
-                                        target_data_complete = False
-                            # Outras mensagens não relacionadas à detecção
-                            elif line:
-                                logger.debug(f"Mensagem: {line}")
-                                
-                # Pequena pausa para evitar consumo excessivo de CPU
-                time.sleep(0.01)
-                
-            except Exception as e:
-                logger.error(f"❌ Erro no loop de recepção: {str(e)}")
-                logger.error(traceback.format_exc())
-                time.sleep(1)  # Pausa para evitar spam de logs em caso de erro
-                
-    def process_radar_data(self, raw_data):
-        """Processa dados brutos do radar recebidos pela serial"""
-        logger.info("="*50)
-        logger.info("📡 Dados recebidos pela porta serial")
-        logger.info(f"Dados brutos: {raw_data[:100]}...")  # Mostrar apenas o início para não poluir o log
-        
-        # Converter dados
-        converted_data = convert_radar_data(raw_data)
-        if not converted_data:
-            logger.warning("⚠️ Não foi possível extrair dados do radar desta mensagem")
-            return
-            
-        # Adicionar timestamp
-        current_time = datetime.now()
-        converted_data['timestamp'] = current_time.strftime('%Y-%m-%d %H:%M:%S')
-        
-        # Identificar seção baseado na posição
-        section = shelf_manager.get_section_at_position(
-            converted_data['x_point'],
-            converted_data['y_point'],
-            self.db_manager
-        )
-        
-        if section:
-            converted_data['section_id'] = section['section_id']
-            converted_data['product_id'] = section['product_id']
-            logger.info(f"📍 Seção detectada: {section['section_name']} (Produto: {section['product_id']})")
-        else:
-            converted_data['section_id'] = None
-            converted_data['product_id'] = None
-            logger.info("❌ Nenhuma seção detectada para esta posição")
-            
-        # Calcular satisfação
-        satisfaction_data = self.analytics_manager.calculate_satisfaction_score(
-            converted_data.get('move_speed'),
-            converted_data.get('heart_rate'),
-            converted_data.get('breath_rate')
-        )
-        
-        converted_data['satisfaction_score'] = satisfaction_data[0]
-        converted_data['satisfaction_class'] = satisfaction_data[1]
-        
-        # Calcular engajamento
-        is_engaged = converted_data.get('move_speed', float('inf')) <= self.analytics_manager.MOVEMENT_THRESHOLD
-        converted_data['is_engaged'] = is_engaged
-        
-        # Log dos dados calculados
-        logger.info(f"Dados processados: {converted_data}")
-        logger.info(f"Dados de engajamento: engajado={is_engaged}")
-        logger.info(f"Dados de satisfação: score={satisfaction_data[0]}, class={satisfaction_data[1]}")
-        
-        # Inserir dados no banco
-        if self.db_manager:
-            success = self.db_manager.insert_radar_data(converted_data)
-            if not success:
-                logger.error("❌ Falha ao inserir dados no banco")
-        else:
-            logger.warning("⚠️ Gerenciador de banco de dados não disponível, dados não foram salvos")
+    data = app.data_manager.get_last_n_readings(n)
+    return jsonify({
+        'count': len(data),
+        'readings': data
+    })
+
+@app.route('/data/stats')
+def get_stats():
+    """Retorna estatísticas dos dados coletados"""
+    if not hasattr(app, 'data_manager'):
+        return jsonify({'error': 'Sistema ainda não inicializado'}), 500
+    
+    data = app.data_manager.data['radar_dados']
+    if not data:
+        return jsonify({'message': 'Nenhum dado coletado ainda'})
+    
+    # Calcular estatísticas básicas
+    total_readings = len(data)
+    latest_reading = data[-1] if data else None
+    readings_last_hour = len([d for d in data if 
+        datetime.strptime(d['timestamp'], '%Y-%m-%d %H:%M:%S') > 
+        datetime.now() - timedelta(hours=1)])
+    
+    return jsonify({
+        'total_readings': total_readings,
+        'readings_last_hour': readings_last_hour,
+        'latest_reading_time': latest_reading['timestamp'] if latest_reading else None,
+        'system_errors': system_status['errors']
+    })
 
 def main():
-    # Inicializar gerenciador de banco de dados
-    logger.info("Iniciando DatabaseManager...")
+    # Inicializar gerenciador de dados em arquivo
+    logger.info("Iniciando FileDataManager...")
     try:
-        db_manager = DatabaseManager()
-        logger.info("✅ DatabaseManager iniciado com sucesso!")
+        data_manager = FileDataManager()
+        app.data_manager = data_manager  # Guardar referência para uso nos endpoints
+        logger.info("✅ FileDataManager iniciado com sucesso!")
     except Exception as e:
-        logger.error(f"❌ Erro ao criar instância do DatabaseManager: {e}")
+        logger.error(f"❌ Erro ao criar instância do FileDataManager: {e}")
         logger.error(traceback.format_exc())
         return
 
@@ -721,30 +631,28 @@ def main():
     try:
         # Iniciar o receptor
         logger.info(f"Iniciando SerialRadarManager...")
-        success = radar_manager.start(db_manager)
+        success = radar_manager.start(data_manager)
         
         if not success:
             logger.error("❌ Falha ao iniciar o gerenciador de radar serial")
             return
             
-        logger.info("="*50)
-        logger.info("🚀 Sistema Radar Serial iniciado com sucesso!")
-        logger.info(f"📡 Porta serial: {radar_manager.port}")
-        logger.info(f"📡 Baudrate: {radar_manager.baudrate}")
-        logger.info("⚡ Pressione Ctrl+C para encerrar")
-        logger.info("="*50)
+        # Iniciar servidor Flask em uma thread separada
+        flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5000, debug=False))
+        flask_thread.daemon = True
+        flask_thread.start()
         
         # Manter o programa rodando
         while True:
             time.sleep(1)
             
     except KeyboardInterrupt:
-        logger.info("Encerrando por interrupção do usuário...")
+        print("\nEncerrando por interrupção do usuário...")
         
     finally:
         # Parar o receptor
         radar_manager.stop()
-        logger.info("Sistema encerrado!")
+        print("Sistema encerrado!")
 
 if __name__ == "__main__":
     main() 
