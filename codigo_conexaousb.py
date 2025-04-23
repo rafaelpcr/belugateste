@@ -1,7 +1,6 @@
-import mysql.connector
+import json
 from datetime import datetime, timedelta
 import logging
-import json
 import os
 from dotenv import load_dotenv
 import traceback
@@ -122,375 +121,63 @@ def convert_radar_data(raw_data):
         logger.error(traceback.format_exc())
         return None
 
-class ShelfManager:
-    def __init__(self):
-        # Constantes para mapeamento de seções
-        self.SECTION_WIDTH = 0.5  # Largura de cada seção em metros
-        self.SECTION_HEIGHT = 0.3  # Altura de cada seção em metros
-        self.MAX_SECTIONS_X = 4    # Número máximo de seções na horizontal
-        self.MAX_SECTIONS_Y = 3    # Número máximo de seções na vertical
-        
-    def initialize_database(self, db_manager):
-        """Inicializa a tabela de seções da gôndola"""
+class FileDataManager:
+    def __init__(self, data_file='radar_data.json'):
+        self.data_file = data_file
+        self.data = {
+            'radar_dados': [],
+            'shelf_sections': []
+        }
+        self.load_data()
+
+    def load_data(self):
+        """Carrega dados do arquivo se ele existir"""
         try:
-            # Criar tabela para seções da gôndola
-            db_manager.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS shelf_sections (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    section_name VARCHAR(50),
-                    x_start FLOAT,
-                    y_start FLOAT,
-                    x_end FLOAT,
-                    y_end FLOAT,
-                    product_id VARCHAR(50),
-                    product_name VARCHAR(100),
-                    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    is_active BOOLEAN DEFAULT TRUE
-                )
-            """)
-            db_manager.conn.commit()
-            logger.info("✅ Tabela shelf_sections criada/verificada com sucesso!")
-            
+            if os.path.exists(self.data_file):
+                with open(self.data_file, 'r') as f:
+                    self.data = json.load(f)
         except Exception as e:
-            logger.error(f"❌ Erro ao inicializar tabela shelf_sections: {str(e)}")
-            logger.error(traceback.format_exc())
-            raise
-            
-    def get_section_at_position(self, x, y, db_manager):
-        """Identifica a seção baseada nas coordenadas (x, y)"""
+            logger.error(f"Erro ao carregar dados do arquivo: {str(e)}")
+
+    def save_data(self):
+        """Salva dados no arquivo"""
         try:
-            query = """
-                SELECT id, section_name, product_id, x_start, x_end, y_start, y_end 
-                FROM shelf_sections 
-                WHERE x_start <= %s AND x_end >= %s 
-                AND y_start <= %s AND y_end >= %s 
-                AND is_active = TRUE
-            """
-            db_manager.cursor.execute(query, (x, x, y, y))
-            result = db_manager.cursor.fetchone()
+            with open(self.data_file, 'w') as f:
+                json.dump(self.data, f, indent=2)
+        except Exception as e:
+            logger.error(f"Erro ao salvar dados no arquivo: {str(e)}")
+
+    def insert_radar_data(self, data):
+        """Insere dados do radar no arquivo"""
+        try:
+            # Adicionar ID único e timestamp
+            data['id'] = str(uuid.uuid4())
+            if 'timestamp' not in data:
+                data['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+            # Adicionar aos dados existentes
+            self.data['radar_dados'].append(data)
             
-            if result:
-                return {
-                    'section_id': result[0],
-                    'section_name': result[1],
-                    'product_id': result[2],
-                    'x_start': result[3],
-                    'x_end': result[4],
-                    'y_start': result[5],
-                    'y_end': result[6]
-                }
+            # Salvar no arquivo
+            self.save_data()
+            logger.info("✅ Dados salvos com sucesso no arquivo!")
+            return True
+        except Exception as e:
+            logger.error(f"❌ Erro ao salvar dados: {str(e)}")
+            return False
+
+    def get_section_at_position(self, x, y):
+        """Busca seção baseada nas coordenadas (x, y)"""
+        try:
+            for section in self.data['shelf_sections']:
+                if (section['x_start'] <= x <= section['x_end'] and
+                    section['y_start'] <= y <= section['y_end'] and
+                    section.get('is_active', True)):
+                    return section
             return None
-            
         except Exception as e:
             logger.error(f"Erro ao buscar seção: {str(e)}")
             return None
-        
-    def add_section(self, section_data, db_manager):
-        """
-        Adiciona uma nova seção à gôndola
-        section_data: dict com section_name, x_start, y_start, x_end, y_end, product_id, product_name
-        """
-        try:
-            query = """
-                INSERT INTO shelf_sections
-                (section_name, x_start, y_start, x_end, y_end, product_id, product_name)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """
-            
-            params = (
-                section_data['section_name'],
-                section_data['x_start'],
-                section_data['y_start'],
-                section_data['x_end'],
-                section_data['y_end'],
-                section_data['product_id'],
-                section_data['product_name']
-            )
-            
-            db_manager.cursor.execute(query, params)
-            db_manager.conn.commit()
-            
-            logger.info(f"✅ Seção {section_data['section_name']} adicionada com sucesso!")
-            return True
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao adicionar seção: {str(e)}")
-            logger.error(traceback.format_exc())
-            return False
-            
-    def get_all_sections(self, db_manager):
-        """Retorna todas as seções ativas"""
-        try:
-            query = """
-                SELECT * FROM shelf_sections
-                WHERE is_active = TRUE
-                ORDER BY section_name
-            """
-            
-            db_manager.cursor.execute(query)
-            sections = db_manager.cursor.fetchall()
-            
-            return sections
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao buscar seções: {str(e)}")
-            logger.error(traceback.format_exc())
-            return []
-
-# Instância global do gerenciador de seções
-shelf_manager = ShelfManager()
-
-# Configurações do MySQL
-db_config = {
-    "host": os.getenv("DB_HOST", "168.75.89.11"),
-    "user": os.getenv("DB_USER", "belugaDB"),
-    "password": os.getenv("DB_PASSWORD", "Rpcr@300476"),
-    "database": os.getenv("DB_NAME", "Beluga_Analytics"),
-    "port": int(os.getenv("DB_PORT", 3306)),
-    "use_pure": True,
-    "ssl_disabled": True
-}
-
-class DatabaseManager:
-    def __init__(self):
-        self.conn = None
-        self.cursor = None
-        self.last_sequence = 0
-        self.last_move_speed = None
-        self.connect_with_retry()
-        
-    def connect_with_retry(self, max_attempts=5):
-        """Tenta conectar ao banco com retry"""
-        attempt = 0
-        while attempt < max_attempts:
-            try:
-                attempt += 1
-                logger.info(f"Tentativa {attempt} de {max_attempts} para conectar ao banco...")
-                
-                if self.conn:
-                    try:
-                        self.conn.close()
-                    except:
-                        pass
-                
-                self.conn = mysql.connector.connect(**db_config)
-                self.cursor = self.conn.cursor(dictionary=True, buffered=True)
-                
-                # Testar conexão
-                self.cursor.execute("SELECT 1")
-                self.cursor.fetchone()
-                
-                logger.info("✅ Conexão estabelecida com sucesso!")
-                self.initialize_database()
-                return True
-                
-            except Exception as e:
-                logger.error(f"❌ Tentativa {attempt} falhou: {str(e)}")
-                if attempt == max_attempts:
-                    logger.error("Todas as tentativas de conexão falharam!")
-                    raise
-                time.sleep(2)
-        return False
-
-    def initialize_database(self):
-        """Inicializa o banco de dados e cria as tabelas necessárias"""
-        try:
-            # Verificar tabela radar_dados
-            logger.info("Verificando tabela radar_dados...")
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS radar_dados (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    x_point FLOAT,
-                    y_point FLOAT,
-                    move_speed FLOAT,
-                    heart_rate FLOAT,
-                    breath_rate FLOAT,
-                    satisfaction_score FLOAT,
-                    satisfaction_class VARCHAR(20),
-                    is_engaged BOOLEAN,
-                    engagement_duration INT,
-                    session_id VARCHAR(36),
-                    section_id INT,
-                    product_id VARCHAR(20),
-                    timestamp DATETIME,
-                    serial_number VARCHAR(20)
-                )
-            """)
-            self.conn.commit()
-            logger.info("✅ Tabela radar_dados criada/verificada com sucesso!")
-
-            # Verificar tabela radar_sessoes
-            logger.info("Verificando tabela radar_sessoes...")
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS radar_sessoes (
-                    session_id VARCHAR(50) PRIMARY KEY,
-                    start_time DATETIME,
-                    end_time DATETIME,
-                    duration INT,
-                    avg_heart_rate FLOAT,
-                    avg_breath_rate FLOAT,
-                    avg_satisfaction FLOAT,
-                    satisfaction_class VARCHAR(20),
-                    is_engaged BOOLEAN,
-                    data_points INT
-                )
-            """)
-            self.conn.commit()
-            logger.info("✅ Tabela radar_sessoes criada/verificada com sucesso!")
-
-            # Verificar tabela shelf_sections
-            shelf_manager.initialize_database(self)
-            
-            logger.info("✅ Banco de dados inicializado com sucesso!")
-            return True
-
-        except Exception as e:
-            logger.error(f"❌ Erro ao inicializar banco: {str(e)}")
-            return False
-
-    def insert_radar_data(self, data, attempt=0, max_retries=3, retry_delay=1):
-        """Insere dados do radar no banco de dados"""
-        try:
-            # Query de inserção
-            query = """
-                INSERT INTO radar_dados
-                (x_point, y_point, move_speed, heart_rate, breath_rate, 
-                satisfaction_score, satisfaction_class, is_engaged, engagement_duration, 
-                session_id, section_id, product_id, timestamp, serial_number)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            
-            # Preparar parâmetros
-            params = (
-                float(data.get('x_point')),
-                float(data.get('y_point')),
-                float(data.get('move_speed')),
-                float(data.get('heart_rate')) if data.get('heart_rate') is not None else None,
-                float(data.get('breath_rate')) if data.get('breath_rate') is not None else None,
-                float(data.get('satisfaction_score', 0)),
-                data.get('satisfaction_class', 'NEUTRA'),
-                bool(data.get('is_engaged', False)),
-                int(data.get('engagement_duration', 0)),
-                data.get('session_id'),
-                int(data.get('section_id', 1)) if data.get('section_id') else None,
-                data.get('product_id', 'UNKNOWN'),
-                data.get('timestamp', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                data.get('serial_number', 'RADAR_1')
-            )
-            
-            logger.info(f"Query: {query}")
-            logger.info(f"Parâmetros: {params}")
-            
-            # Executar inserção com retry em caso de deadlock
-            try:
-                self.cursor.execute(query, params)
-                self.conn.commit()
-                logger.info("✅ Dados inseridos com sucesso!")
-                return True
-            except mysql.connector.errors.DatabaseError as e:
-                if e.errno == 1205 and attempt < max_retries - 1:  # Lock timeout error
-                    logger.warning(f"Lock timeout na tentativa {attempt + 1}, tentando novamente em {retry_delay} segundos...")
-                    time.sleep(retry_delay)
-                    return self.insert_radar_data(data, attempt + 1, max_retries, retry_delay)
-                raise
-                
-        except Exception as e:
-            logger.error(f"❌ Erro ao inserir dados: {str(e)}")
-            logger.error(traceback.format_exc())
-            if attempt < max_retries - 1:
-                logger.info(f"Tentando novamente em {retry_delay} segundos...")
-                time.sleep(retry_delay)
-                return self.insert_radar_data(data, attempt + 1, max_retries, retry_delay)
-            return False
-
-class AnalyticsManager:
-    def __init__(self):
-        # Constantes para engajamento
-        self.ENGAGEMENT_TIME_THRESHOLD = 5  # segundos
-        self.MOVEMENT_THRESHOLD = 20.0  # limite para considerar "parado" em cm/s
-        self.ENGAGEMENT_MIN_DURATION = 5  # duração mínima para considerar engajamento completo
-        
-        # Constantes para satisfação
-        self.HEART_RATE_MIN = 60
-        self.HEART_RATE_MAX = 100
-        self.HEART_RATE_IDEAL = 75
-        
-        self.BREATH_RATE_MIN = 12
-        self.BREATH_RATE_MAX = 20
-        self.BREATH_RATE_IDEAL = 15
-        
-        # Pesos para o cálculo de satisfação
-        self.WEIGHT_HEART_RATE = 0.5
-        self.WEIGHT_RESP_RATE = 0.5
-        
-        # Rastreamento de engajamento
-        self.engagement_start_time = None
-        self.last_movement_time = None
-        self.previous_heart_rates = []
-
-    def calculate_satisfaction_score(self, move_speed, heart_rate, breath_rate):
-        """
-        Calcula o score de satisfação baseado nas métricas do radar e VFC
-        Retorna: (score, classificação)
-        """
-        try:
-            # Adicionar ao histórico de batimentos cardíacos
-            if heart_rate:
-                self.previous_heart_rates.append(heart_rate)
-                # Manter apenas os últimos 10 valores
-                if len(self.previous_heart_rates) > 10:
-                    self.previous_heart_rates.pop(0)
-            
-            # Calcular VFC se houver histórico de batimentos cardíacos
-            vfc_score = 0
-            if len(self.previous_heart_rates) > 1:
-                # Calcular a variabilidade entre os últimos batimentos
-                vfc = np.std(self.previous_heart_rates[-5:])  # Usar últimos 5 valores
-                vfc_score = min(1.0, vfc / 10.0)  # Normalizar VFC (assumindo variação máxima de 10 bpm)
-            
-            # Normalizar as métricas para uma escala de 0-1
-            move_speed_norm = min(1.0, move_speed / 30.0)  # Velocidade máxima considerada: 30 cm/s
-            heart_rate_norm = max(0.0, min(1.0, (heart_rate - 50) / 50))  # Faixa mais ampla: 50-100 bpm
-            breath_rate_norm = max(0.0, min(1.0, (breath_rate - 10) / 15))  # Faixa mais ampla: 10-25 rpm
-            
-            # Pesos atualizados baseados no estudo
-            WEIGHTS = {
-                'move_speed': 0.3,     # Velocidade tem peso médio
-                'heart_rate': 0.3,     # Frequência cardíaca tem peso médio
-                'breath_rate': 0.2,    # Respiração tem peso menor
-                'vfc': 0.2             # VFC tem peso significativo
-            }
-            
-            # Calcular score ponderado (0-100)
-            score = 100 * (
-                WEIGHTS['move_speed'] * (1 - move_speed_norm) +  # Menor velocidade = maior satisfação
-                WEIGHTS['heart_rate'] * (1 - heart_rate_norm) +  # Menor freq cardíaca = maior satisfação
-                WEIGHTS['breath_rate'] * (1 - breath_rate_norm) +  # Menor freq respiratória = maior satisfação
-                WEIGHTS['vfc'] * vfc_score  # Maior VFC = maior satisfação
-            )
-            
-            # Classificar o score com níveis mais granulares
-            if score >= 85:
-                satisfaction_class = 'Muito Satisfeito'
-            elif score >= 70:
-                satisfaction_class = 'Satisfeito'
-            elif score >= 55:
-                satisfaction_class = 'Levemente Satisfeito'
-            elif score >= 40:
-                satisfaction_class = 'Neutro'
-            elif score >= 25:
-                satisfaction_class = 'Levemente Insatisfeito'
-            elif score >= 10:
-                satisfaction_class = 'Insatisfeito'
-            else:
-                satisfaction_class = 'Muito Insatisfeito'
-                
-            return score, satisfaction_class
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao calcular satisfação: {str(e)}")
-            logger.error(traceback.format_exc())
-            return 50, 'Neutro'  # Valor padrão em caso de erro
 
 class SerialRadarManager:
     def __init__(self, port=None, baudrate=115200):
@@ -499,7 +186,7 @@ class SerialRadarManager:
         self.serial_connection = None
         self.is_running = False
         self.receive_thread = None
-        self.db_manager = None
+        self.data_manager = None
         self.analytics_manager = AnalyticsManager()
         
     def find_serial_port(self):
@@ -544,9 +231,9 @@ class SerialRadarManager:
             logger.error(traceback.format_exc())
             return False
             
-    def start(self, db_manager):
+    def start(self, data_manager):
         """Inicia o receptor de dados seriais em uma thread separada"""
-        self.db_manager = db_manager
+        self.data_manager = data_manager
         
         if not self.connect():
             return False
@@ -659,14 +346,13 @@ class SerialRadarManager:
         converted_data['timestamp'] = current_time.strftime('%Y-%m-%d %H:%M:%S')
         
         # Identificar seção baseado na posição
-        section = shelf_manager.get_section_at_position(
+        section = self.data_manager.get_section_at_position(
             converted_data['x_point'],
-            converted_data['y_point'],
-            self.db_manager
+            converted_data['y_point']
         )
         
         if section:
-            converted_data['section_id'] = section['section_id']
+            converted_data['section_id'] = section['id']
             converted_data['product_id'] = section['product_id']
             logger.info(f"📍 Seção detectada: {section['section_name']} (Produto: {section['product_id']})")
         else:
@@ -693,22 +379,111 @@ class SerialRadarManager:
         logger.info(f"Dados de engajamento: engajado={is_engaged}")
         logger.info(f"Dados de satisfação: score={satisfaction_data[0]}, class={satisfaction_data[1]}")
         
-        # Inserir dados no banco
-        if self.db_manager:
-            success = self.db_manager.insert_radar_data(converted_data)
+        # Salvar dados no arquivo
+        if self.data_manager:
+            success = self.data_manager.insert_radar_data(converted_data)
             if not success:
-                logger.error("❌ Falha ao inserir dados no banco")
+                logger.error("❌ Falha ao salvar dados no arquivo")
         else:
-            logger.warning("⚠️ Gerenciador de banco de dados não disponível, dados não foram salvos")
+            logger.warning("⚠️ Gerenciador de dados não disponível, dados não foram salvos")
+
+class AnalyticsManager:
+    def __init__(self):
+        # Constantes para engajamento
+        self.ENGAGEMENT_TIME_THRESHOLD = 5  # segundos
+        self.MOVEMENT_THRESHOLD = 20.0  # limite para considerar "parado" em cm/s
+        self.ENGAGEMENT_MIN_DURATION = 5  # duração mínima para considerar engajamento completo
+        
+        # Constantes para satisfação
+        self.HEART_RATE_MIN = 60
+        self.HEART_RATE_MAX = 100
+        self.HEART_RATE_IDEAL = 75
+        
+        self.BREATH_RATE_MIN = 12
+        self.BREATH_RATE_MAX = 20
+        self.BREATH_RATE_IDEAL = 15
+        
+        # Pesos para o cálculo de satisfação
+        self.WEIGHT_HEART_RATE = 0.5
+        self.WEIGHT_RESP_RATE = 0.5
+        
+        # Rastreamento de engajamento
+        self.engagement_start_time = None
+        self.last_movement_time = None
+        self.previous_heart_rates = []
+
+    def calculate_satisfaction_score(self, move_speed, heart_rate, breath_rate):
+        """
+        Calcula o score de satisfação baseado nas métricas do radar e VFC
+        Retorna: (score, classificação)
+        """
+        try:
+            # Adicionar ao histórico de batimentos cardíacos
+            if heart_rate:
+                self.previous_heart_rates.append(heart_rate)
+                # Manter apenas os últimos 10 valores
+                if len(self.previous_heart_rates) > 10:
+                    self.previous_heart_rates.pop(0)
+            
+            # Calcular VFC se houver histórico de batimentos cardíacos
+            vfc_score = 0
+            if len(self.previous_heart_rates) > 1:
+                # Calcular a variabilidade entre os últimos batimentos
+                vfc = np.std(self.previous_heart_rates[-5:])  # Usar últimos 5 valores
+                vfc_score = min(1.0, vfc / 10.0)  # Normalizar VFC (assumindo variação máxima de 10 bpm)
+            
+            # Normalizar as métricas para uma escala de 0-1
+            move_speed_norm = min(1.0, move_speed / 30.0)  # Velocidade máxima considerada: 30 cm/s
+            heart_rate_norm = max(0.0, min(1.0, (heart_rate - 50) / 50))  # Faixa mais ampla: 50-100 bpm
+            breath_rate_norm = max(0.0, min(1.0, (breath_rate - 10) / 15))  # Faixa mais ampla: 10-25 rpm
+            
+            # Pesos atualizados baseados no estudo
+            WEIGHTS = {
+                'move_speed': 0.3,     # Velocidade tem peso médio
+                'heart_rate': 0.3,     # Frequência cardíaca tem peso médio
+                'breath_rate': 0.2,    # Respiração tem peso menor
+                'vfc': 0.2             # VFC tem peso significativo
+            }
+            
+            # Calcular score ponderado (0-100)
+            score = 100 * (
+                WEIGHTS['move_speed'] * (1 - move_speed_norm) +  # Menor velocidade = maior satisfação
+                WEIGHTS['heart_rate'] * (1 - heart_rate_norm) +  # Menor freq cardíaca = maior satisfação
+                WEIGHTS['breath_rate'] * (1 - breath_rate_norm) +  # Menor freq respiratória = maior satisfação
+                WEIGHTS['vfc'] * vfc_score  # Maior VFC = maior satisfação
+            )
+            
+            # Classificar o score com níveis mais granulares
+            if score >= 85:
+                satisfaction_class = 'Muito Satisfeito'
+            elif score >= 70:
+                satisfaction_class = 'Satisfeito'
+            elif score >= 55:
+                satisfaction_class = 'Levemente Satisfeito'
+            elif score >= 40:
+                satisfaction_class = 'Neutro'
+            elif score >= 25:
+                satisfaction_class = 'Levemente Insatisfeito'
+            elif score >= 10:
+                satisfaction_class = 'Insatisfeito'
+            else:
+                satisfaction_class = 'Muito Insatisfeito'
+                
+            return score, satisfaction_class
+            
+        except Exception as e:
+            logger.error(f"❌ Erro ao calcular satisfação: {str(e)}")
+            logger.error(traceback.format_exc())
+            return 50, 'Neutro'  # Valor padrão em caso de erro
 
 def main():
-    # Inicializar gerenciador de banco de dados
-    logger.info("Iniciando DatabaseManager...")
+    # Inicializar gerenciador de dados em arquivo
+    logger.info("Iniciando FileDataManager...")
     try:
-        db_manager = DatabaseManager()
-        logger.info("✅ DatabaseManager iniciado com sucesso!")
+        data_manager = FileDataManager()
+        logger.info("✅ FileDataManager iniciado com sucesso!")
     except Exception as e:
-        logger.error(f"❌ Erro ao criar instância do DatabaseManager: {e}")
+        logger.error(f"❌ Erro ao criar instância do FileDataManager: {e}")
         logger.error(traceback.format_exc())
         return
 
@@ -721,7 +496,7 @@ def main():
     try:
         # Iniciar o receptor
         logger.info(f"Iniciando SerialRadarManager...")
-        success = radar_manager.start(db_manager)
+        success = radar_manager.start(data_manager)
         
         if not success:
             logger.error("❌ Falha ao iniciar o gerenciador de radar serial")
