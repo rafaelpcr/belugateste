@@ -32,57 +32,41 @@ RANGE_STEP = 2.5  # Valor do RANGE_STEP do código ESP32/Arduino
 def parse_serial_data(raw_data):
     """Analisa os dados brutos da porta serial para extrair informações do radar mmWave"""
     try:
-        # Padrão para extrair valores do texto recebido pela porta serial
-        # Procurar no formato específico do ESP32/Arduino com mmWave
+        # Padrões para extrair valores do texto recebido pela porta serial
         x_pattern = r'x_point:\s*([-]?\d+\.\d+)'
         y_pattern = r'y_point:\s*([-]?\d+\.\d+)'
-        dop_pattern = r'dop_index:\s*(\d+)'
-        move_speed_pattern = r'move_speed:\s*([-]?\d+\.\d+)\s*cm/s'
-        heart_rate_pattern = r'heart_rate:\s*([-]?\d+\.\d+)'
-        breath_rate_pattern = r'breath_rate:\s*([-]?\d+\.\d+)'
+        speed_pattern = r'move_speed:\s*([-]?\d+\.\d+)\s*cm/s'
         
         # Extrair valores usando expressões regulares
         x_match = re.search(x_pattern, raw_data)
         y_match = re.search(y_pattern, raw_data)
-        dop_match = re.search(dop_pattern, raw_data)
-        speed_match = re.search(move_speed_pattern, raw_data)
-        heart_match = re.search(heart_rate_pattern, raw_data)
-        breath_match = re.search(breath_rate_pattern, raw_data)
+        speed_match = re.search(speed_pattern, raw_data)
         
         if x_match and y_match:
             # Dados obrigatórios: posição x e y
             x_point = float(x_match.group(1))
             y_point = float(y_match.group(1))
             
-            # Velocidade de movimento: usar diretamente ou calcular do índice Doppler
-            if speed_match:
-                move_speed = float(speed_match.group(1))
-            elif dop_match:
-                dop_index = int(dop_match.group(1))
-                move_speed = dop_index * RANGE_STEP
-            else:
-                move_speed = 0.0
+            # Velocidade de movimento
+            move_speed = float(speed_match.group(1)) if speed_match else 0.0
             
-            # Dados de sinais vitais: usar valores recebidos ou padrões
-            heart_rate = float(heart_match.group(1)) if heart_match else 75.0
-            breath_rate = float(breath_match.group(1)) if breath_match else 15.0
+            # Valores fixos para sinais vitais (conforme Arduino)
+            heart_rate = 75.0
+            breath_rate = 15.0
             
             return {
                 'x_point': x_point,
                 'y_point': y_point,
                 'move_speed': move_speed,
                 'heart_rate': heart_rate,
-                'breath_rate': breath_rate,
-                'dop_index': int(dop_match.group(1)) if dop_match else 0
+                'breath_rate': breath_rate
             }
         else:
             # Se não for possível extrair todos os valores necessários
-            if '-----Human Detected-----' in raw_data and not ('x_point:' in raw_data):
-                # Mensagem somente de detecção humana sem detalhes
+            if '-----Human Detected-----' in raw_data:
                 logger.info("Detecção humana sem informações detalhadas")
                 return None
             elif raw_data.strip():
-                # Mensagem não vazia mas sem os dados necessários
                 logger.debug(f"Dados incompletos: {raw_data}")
             return None
             
@@ -410,63 +394,39 @@ class AnalyticsManager:
         self.MOVEMENT_THRESHOLD = 20.0  # limite para considerar "parado" em cm/s
         self.ENGAGEMENT_MIN_DURATION = 5  # duração mínima para considerar engajamento completo
         
-        # Constantes para satisfação
-        self.HEART_RATE_MIN = 60
-        self.HEART_RATE_MAX = 100
-        self.HEART_RATE_IDEAL = 75
-        
-        self.BREATH_RATE_MIN = 12
-        self.BREATH_RATE_MAX = 20
-        self.BREATH_RATE_IDEAL = 15
-        
-        # Pesos para o cálculo de satisfação
-        self.WEIGHT_HEART_RATE = 0.5
-        self.WEIGHT_RESP_RATE = 0.5
+        # Valores fixos do Arduino
+        self.HEART_RATE = 75.0
+        self.BREATH_RATE = 15.0
         
         # Rastreamento de engajamento
         self.engagement_start_time = None
         self.last_movement_time = None
-        self.previous_heart_rates = []
 
-    def calculate_satisfaction_score(self, move_speed, heart_rate, breath_rate):
+    def calculate_satisfaction_score(self, move_speed, heart_rate=None, breath_rate=None):
         """
-        Calcula o score de satisfação baseado nas métricas do radar e VFC
-        Retorna: (score, classificação)
+        Calcula o score de satisfação baseado nas métricas do radar
+        Usa valores fixos para heart_rate e breath_rate
         """
         try:
-            # Adicionar ao histórico de batimentos cardíacos
-            if heart_rate:
-                self.previous_heart_rates.append(heart_rate)
-                # Manter apenas os últimos 10 valores
-                if len(self.previous_heart_rates) > 10:
-                    self.previous_heart_rates.pop(0)
-            
-            # Calcular VFC se houver histórico de batimentos cardíacos
-            vfc_score = 0
-            if len(self.previous_heart_rates) > 1:
-                # Calcular a variabilidade entre os últimos batimentos
-                vfc = np.std(self.previous_heart_rates[-5:])  # Usar últimos 5 valores
-                vfc_score = min(1.0, vfc / 10.0)  # Normalizar VFC (assumindo variação máxima de 10 bpm)
+            # Usar valores fixos do Arduino
+            heart_rate = self.HEART_RATE
+            breath_rate = self.BREATH_RATE
             
             # Normalizar as métricas para uma escala de 0-1
             move_speed_norm = min(1.0, move_speed / 30.0)  # Velocidade máxima considerada: 30 cm/s
-            heart_rate_norm = max(0.0, min(1.0, (heart_rate - 50) / 50))  # Faixa mais ampla: 50-100 bpm
-            breath_rate_norm = max(0.0, min(1.0, (breath_rate - 10) / 15))  # Faixa mais ampla: 10-25 rpm
             
             # Pesos atualizados baseados no estudo
             WEIGHTS = {
-                'move_speed': 0.3,     # Velocidade tem peso médio
-                'heart_rate': 0.3,     # Frequência cardíaca tem peso médio
-                'breath_rate': 0.2,    # Respiração tem peso menor
-                'vfc': 0.2             # VFC tem peso significativo
+                'move_speed': 0.6,     # Velocidade tem peso maior
+                'heart_rate': 0.2,     # Frequência cardíaca tem peso menor
+                'breath_rate': 0.2     # Respiração tem peso menor
             }
             
             # Calcular score ponderado (0-100)
             score = 100 * (
                 WEIGHTS['move_speed'] * (1 - move_speed_norm) +  # Menor velocidade = maior satisfação
-                WEIGHTS['heart_rate'] * (1 - heart_rate_norm) +  # Menor freq cardíaca = maior satisfação
-                WEIGHTS['breath_rate'] * (1 - breath_rate_norm) +  # Menor freq respiratória = maior satisfação
-                WEIGHTS['vfc'] * vfc_score  # Maior VFC = maior satisfação
+                WEIGHTS['heart_rate'] * 0.5 +  # Valor médio para heart_rate
+                WEIGHTS['breath_rate'] * 0.5   # Valor médio para breath_rate
             )
             
             # Classificar o score com níveis mais granulares
@@ -512,13 +472,11 @@ class SerialRadarManager:
             logger.error("Nenhuma porta serial encontrada!")
             return None
             
-        # Procurar por portas que pareçam ser dispositivos ESP32, Arduino ou Raspberry Pi
+        # Procurar por portas que pareçam ser dispositivos ESP32 ou Arduino
         for port in ports:
-            # Verificar descritores comuns
             desc_lower = port.description.lower()
             if any(term in desc_lower for term in 
-                  ['usb', 'serial', 'uart', 'cp210', 'ch340', 'ft232', 'arduino', 
-                   'esp32', 'raspberry', 'rpi', 'ttyacm', 'ttyusb']):
+                  ['usb', 'serial', 'uart', 'cp210', 'ch340', 'ft232', 'arduino', 'esp32']):
                 logger.info(f"Porta serial encontrada: {port.device} ({port.description})")
                 return port.device
                 
@@ -534,7 +492,15 @@ class SerialRadarManager:
             
         try:
             logger.info(f"Conectando à porta serial {self.port} (baudrate: {self.baudrate})...")
-            self.serial_connection = serial.Serial(self.port, self.baudrate, timeout=1)
+            self.serial_connection = serial.Serial(
+                port=self.port,
+                baudrate=self.baudrate,
+                timeout=1,
+                write_timeout=1,
+                bytesize=serial.EIGHTBITS,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE
+            )
             # Pequeno delay para garantir que a conexão esteja estabilizada
             time.sleep(2)
             logger.info(f"✅ Conexão serial estabelecida com sucesso!")
