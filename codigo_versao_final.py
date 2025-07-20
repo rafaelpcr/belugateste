@@ -1,1813 +1,1381 @@
-import mysql.connector
-from datetime import datetime, timedelta
+import gspread
+from google.oauth2.service_account import Credentials
+from datetime import datetime
 import logging
-import json
-from flask import Flask, request, jsonify
 import os
-from dotenv import load_dotenv
 import traceback
 import time
 import numpy as np
 import uuid
+import serial
+import threading
+import re
+import math
+from dotenv import load_dotenv
 
 # Configuração básica de logging
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO,  # Mudando para INFO para reduzir poluição do terminal
+    format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('radar.log'),
+        logging.FileHandler('radar_serial.log'),
         logging.StreamHandler()
     ]
 )
-logger = logging.getLogger('radar_app')
+logger = logging.getLogger('radar_serial_app')
 
-# Carregar variáveis de ambiente
+# Configurando o nível de log para outros módulos
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+logging.getLogger('gspread').setLevel(logging.WARNING)
+
 load_dotenv()
 
-app = Flask(__name__)
+SERIAL_CONFIG = {
+    'port': os.getenv('SERIAL_PORT', '/dev/ttyACM0'),
+    'baudrate': int(os.getenv('SERIAL_BAUDRATE', 115200))
+}
+RANGE_STEP = 2.5
+
+class GoogleSheetsManager:
+    def __init__(self, creds_path, spreadsheet_name, worksheet_name='Sheet1'):
+        SCOPES = [
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/drive',
+            'https://www.googleapis.com/auth/drive.file'
+        ]
+        
+        try:
+            self.creds = Credentials.from_service_account_file(creds_path, scopes=SCOPES)
+        except Exception as e:
+            logger.error(f"❌ [GSHEETS_INIT] Erro ao carregar credenciais: {str(e)}")
+            raise
+        
+        try:
+            self.gc = gspread.authorize(self.creds)
+        except Exception as e:
+            logger.error(f"❌ [GSHEETS_INIT] Erro na autorização: {str(e)}")
+            raise
+        
+        try:
+            self.spreadsheet = self.gc.open(spreadsheet_name)
+        except Exception as e:
+            logger.error(f"❌ [GSHEETS_INIT] Erro ao abrir planilha: {str(e)}")
+            raise
+        
+        try:
+            self.worksheet = self.spreadsheet.worksheet(worksheet_name)
+            logger.info(f"✅ [GSHEETS_INIT] GoogleSheetsManager inicializado com sucesso!")
+        except Exception as e:
+            logger.error(f"❌ [GSHEETS_INIT] Erro ao acessar worksheet: {str(e)}")
+            raise
+
+    def insert_radar_data(self, data):
+        try:
+            row = [
+                data.get('session_id'),
+                data.get('timestamp'),
+                data.get('x_point'),
+                data.get('y_point'),
+                data.get('move_speed'),
+                data.get('heart_rate'),
+                data.get('breath_rate'),
+                data.get('distance'),
+                data.get('section_id'),
+                data.get('product_id'),
+                data.get('satisfaction_score'),
+                data.get('satisfaction_class'),
+                data.get('is_engaged'),
+                # Novos campos emocionais
+                data.get('emotional_state'),
+                data.get('emotional_score'),
+                data.get('emotional_confidence'),
+                data.get('hrv_value'),
+                data.get('breath_regularity'),
+                data.get('heart_trend')
+            ]
+            
+            # Verificar se há valores None ou problemáticos
+            problematic_values = []
+            for i, value in enumerate(row):
+                if value is None:
+                    problematic_values.append(f"índice {i}: None")
+                elif isinstance(value, (int, float)) and (value != value):  # NaN check
+                    problematic_values.append(f"índice {i}: NaN")
+                elif isinstance(value, str) and len(value) > 1000:  # String muito longa
+                    problematic_values.append(f"índice {i}: string muito longa ({len(value)} chars)")
+            
+            if problematic_values:
+                logger.warning(f"⚠️ [GSHEETS] Valores problemáticos encontrados: {problematic_values}")
+            
+            self.worksheet.append_row(row)
+            
+            logger.info('✅ Dados enviados para o Google Sheets!')
+            return True
+            
+        except Exception as e:
+            logger.error(f'❌ [GSHEETS] Erro ao enviar dados para o Google Sheets: {str(e)}')
+            logger.error(f'❌ [GSHEETS] Tipo do erro: {type(e)}')
+            logger.error(f'❌ [GSHEETS] Dados que causaram o erro: {data}')
+            
+            # Verificações específicas para erros comuns
+            error_msg = str(e).lower()
+            if 'quota' in error_msg or 'rate' in error_msg:
+                logger.error(f'❌ [GSHEETS] Erro de limite de taxa da API! Aguarde antes de tentar novamente.')
+                logger.error(f'❌ [GSHEETS] Considere adicionar delays entre as requisições.')
+            elif 'permission' in error_msg or 'forbidden' in error_msg:
+                logger.error(f'❌ [GSHEETS] Erro de permissão! Verifique as credenciais e permissões da planilha.')
+            elif 'not found' in error_msg:
+                logger.error(f'❌ [GSHEETS] Planilha ou worksheet não encontrada! Verifique o nome da planilha.')
+            elif 'authentication' in error_msg or 'auth' in error_msg:
+                logger.error(f'❌ [GSHEETS] Erro de autenticação! Verifique o arquivo de credenciais.')
+            else:
+                logger.error(f'❌ [GSHEETS] Erro desconhecido da API do Google Sheets.')
+            
+            logger.error(traceback.format_exc())
+            return False
+
+def parse_serial_data(raw_data):
+    try:
+        # Verificação detalhada dos marcadores
+        has_human_detected = '-----Human Detected-----' in raw_data
+        has_target_1 = 'Target 1:' in raw_data
+        
+        # Regex ainda mais tolerante: aceita espaços extras, quebras de linha e maiúsculas/minúsculas
+        x_pattern = r'x_point\s*:\s*([-+]?\d*\.?\d+)'  # aceita inteiro ou float, sinal opcional
+        y_pattern = r'y_point\s*:\s*([-+]?\d*\.?\d+)'
+        dop_pattern = r'dop_index\s*:\s*([-+]?\d+)'  # aceita sinal opcional
+        cluster_pattern = r'cluster_index\s*:\s*(\d+)'
+        speed_pattern = r'move_speed\s*:\s*([-+]?\d*\.?\d+)\s*cm/s'
+        total_phase_pattern = r'total_phase\s*:\s*([-+]?\d*\.?\d+)'
+        breath_phase_pattern = r'breath_phase\s*:\s*([-+]?\d*\.?\d+)'
+        heart_phase_pattern = r'heart_phase\s*:\s*([-+]?\d*\.?\d+)'
+        breath_rate_pattern = r'breath_rate\s*:\s*([-+]?\d*\.?\d+)'
+        heart_rate_pattern = r'heart_rate\s*:\s*([-+]?\d*\.?\d+)'
+        distance_pattern = r'distance\s*:\s*([-+]?\d*\.?\d+)'
+        
+        # Usar flags re.IGNORECASE para aceitar maiúsculas/minúsculas
+        if '-----Human Detected-----' not in raw_data:
+            return None
+        if 'Target 1:' not in raw_data:
+            return None
+            
+        x_match = re.search(x_pattern, raw_data, re.IGNORECASE)
+        y_match = re.search(y_pattern, raw_data, re.IGNORECASE)
+        dop_match = re.search(dop_pattern, raw_data, re.IGNORECASE)
+        cluster_match = re.search(cluster_pattern, raw_data, re.IGNORECASE)
+        speed_match = re.search(speed_pattern, raw_data, re.IGNORECASE)
+        total_phase_match = re.search(total_phase_pattern, raw_data, re.IGNORECASE)
+        breath_phase_match = re.search(breath_phase_pattern, raw_data, re.IGNORECASE)
+        heart_phase_match = re.search(heart_phase_pattern, raw_data, re.IGNORECASE)
+        breath_rate_match = re.search(breath_rate_pattern, raw_data, re.IGNORECASE)
+        heart_rate_match = re.search(heart_rate_pattern, raw_data, re.IGNORECASE)
+        distance_match = re.search(distance_pattern, raw_data, re.IGNORECASE)
+        
+        if x_match and y_match:
+            data = {
+                'x_point': float(x_match.group(1)),
+                'y_point': float(y_match.group(1)),
+                'dop_index': int(dop_match.group(1)) if dop_match else 0,
+                'cluster_index': int(cluster_match.group(1)) if cluster_match else 0,
+                'move_speed': float(speed_match.group(1))/100 if speed_match else 0.0,
+                'total_phase': float(total_phase_match.group(1)) if total_phase_match else 0.0,
+                'breath_phase': float(breath_phase_match.group(1)) if breath_phase_match else 0.0,
+                'heart_phase': float(heart_phase_match.group(1)) if heart_phase_match else 0.0,
+                'breath_rate': float(breath_rate_match.group(1)) if breath_rate_match else None,
+                'heart_rate': float(heart_rate_match.group(1)) if heart_rate_match else None,
+                'distance': float(distance_match.group(1)) if distance_match else None
+            }
+            
+            if data['distance'] is None:
+                data['distance'] = math.sqrt(data['x_point']**2 + data['y_point']**2)
+            
+            if data['heart_rate'] is None:
+                data['heart_rate'] = 75.0
+            
+            if data['breath_rate'] is None:
+                data['breath_rate'] = 15.0
+            
+            return data
+        else:
+            return None
+    except Exception as e:
+        logger.error(f"❌ Erro ao analisar dados seriais: {str(e)}")
+        logger.error(traceback.format_exc())
+        return None
 
 def convert_radar_data(raw_data):
     """Converte dados brutos do radar para o formato do banco de dados"""
     try:
-        # Extrair dados do JSON se necessário
-        data = raw_data if isinstance(raw_data, dict) else json.loads(raw_data)
-        
-        # Converter valores para float
-        x_point = float(data.get('x_point', 0))
-        y_point = float(data.get('y_point', 0))
-        move_speed = float(data.get('move_speed', 0))
-        heart_rate = float(data.get('heart_rate', 0))
-        breath_rate = float(data.get('breath_rate', 0))
-        
-        return {
-            'x_point': x_point,
-            'y_point': y_point,
-            'move_speed': move_speed,
-            'heart_rate': heart_rate,
-            'breath_rate': breath_rate
+        # Verificar se já é um dicionário
+        if isinstance(raw_data, dict):
+            data = raw_data
+        else:
+            # Tentar parsear como JSON primeiro
+            try:
+                data = json.loads(raw_data)
+            except:
+                # Se não for JSON, tentar parsear como texto da serial
+                data = parse_serial_data(raw_data)
+                if not data:
+                    return None
+
+        # Garantir que todos os campos necessários estão presentes
+        result = {
+            'x_point': float(data.get('x_point', 0)),
+            'y_point': float(data.get('y_point', 0)),
+            'move_speed': float(data.get('move_speed', 0)),
+            'heart_rate': float(data.get('heart_rate', 75)),
+            'breath_rate': float(data.get('breath_rate', 15))
         }
+
+        return result
     except Exception as e:
         logger.error(f"Erro ao converter dados do radar: {str(e)}")
+        logger.error(traceback.format_exc())
         return None
 
 class ShelfManager:
     def __init__(self):
-        # Constantes para mapeamento de seções
-        self.SECTION_WIDTH = 0.5  # Largura de cada seção em metros
-        self.SECTION_HEIGHT = 0.3  # Altura de cada seção em metros
-        self.MAX_SECTIONS_X = 4    # Número máximo de seções na horizontal
-        self.MAX_SECTIONS_Y = 3    # Número máximo de seções na vertical
-        
-    def initialize_database(self, db_manager):
-        """Inicializa a tabela de seções da gôndola"""
-        try:
-            # Criar tabela para seções da gôndola
-            db_manager.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS shelf_sections (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    section_name VARCHAR(50),
-                    x_start FLOAT,
-                    y_start FLOAT,
-                    x_end FLOAT,
-                    y_end FLOAT,
-                    product_id VARCHAR(50),
-                    product_name VARCHAR(100),
-                    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    is_active BOOLEAN DEFAULT TRUE
-                )
-            """)
-            db_manager.conn.commit()
-            logger.info("✅ Tabela shelf_sections criada/verificada com sucesso!")
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao inicializar tabela shelf_sections: {str(e)}")
-            logger.error(traceback.format_exc())
-            raise
-            
-    def get_section_at_position(self, x, y, db_manager):
-        """Identifica a seção baseada nas coordenadas (x, y)"""
-        try:
-            query = """
-                SELECT id, section_name, product_id, x_start, x_end, y_start, y_end 
-                FROM shelf_sections 
-                WHERE x_start <= %s AND x_end >= %s 
-                AND y_start <= %s AND y_end >= %s 
-                AND is_active = TRUE
-            """
-            db_manager.cursor.execute(query, (x, x, y, y))
-            result = db_manager.cursor.fetchone()
-            
-            if result:
-                return {
-                    'section_id': result[0],
-                    'section_name': result[1],
-                    'product_id': result[2],
-                    'x_start': result[3],
-                    'x_end': result[4],
-                    'y_start': result[5],
-                    'y_end': result[6]
-                }
-            return None
-            
-        except Exception as e:
-            logger.error(f"Erro ao buscar seção: {str(e)}")
-            return None
-        
-    def add_section(self, section_data, db_manager):
-        """
-        Adiciona uma nova seção à gôndola
-        section_data: dict com section_name, x_start, y_start, x_end, y_end, product_id, product_name
-        """
-        try:
-            query = """
-                INSERT INTO shelf_sections
-                (section_name, x_start, y_start, x_end, y_end, product_id, product_name)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """
-            
-            params = (
-                section_data['section_name'],
-                section_data['x_start'],
-                section_data['y_start'],
-                section_data['x_end'],
-                section_data['y_end'],
-                section_data['product_id'],
-                section_data['product_name']
-            )
-            
-            db_manager.cursor.execute(query, params)
-            db_manager.conn.commit()
-            
-            logger.info(f"✅ Seção {section_data['section_name']} adicionada com sucesso!")
-            return True
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao adicionar seção: {str(e)}")
-            logger.error(traceback.format_exc())
-            return False
-            
-    def update_section(self, section_id, section_data, db_manager):
-        """
-        Atualiza uma seção existente
-        section_data: dict com os campos a serem atualizados
-        """
-        try:
-            # Construir query dinamicamente baseado nos campos fornecidos
-            update_fields = []
-            params = []
-            
-            for field, value in section_data.items():
-                if field in ['section_name', 'x_start', 'y_start', 'x_end', 'y_end', 
-                           'product_id', 'product_name', 'is_active']:
-                    update_fields.append(f"{field} = %s")
-                    params.append(value)
-            
-            if not update_fields:
-                logger.warning("Nenhum campo para atualizar")
-                return False
-                
-            # Adicionar section_id aos parâmetros
-            params.append(section_id)
-            
-            query = f"""
-                UPDATE shelf_sections
-                SET {', '.join(update_fields)}
-                WHERE id = %s
-            """
-            
-            db_manager.cursor.execute(query, params)
-            db_manager.conn.commit()
-            
-            logger.info(f"✅ Seção {section_id} atualizada com sucesso!")
-            return True
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao atualizar seção: {str(e)}")
-            logger.error(traceback.format_exc())
-            return False
-            
-    def get_all_sections(self, db_manager):
-        """Retorna todas as seções ativas"""
-        try:
-            query = """
-                SELECT * FROM shelf_sections
-                WHERE is_active = TRUE
-                ORDER BY section_name
-            """
-            
-            db_manager.cursor.execute(query)
-            sections = db_manager.cursor.fetchall()
-            
-            return sections
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao buscar seções: {str(e)}")
-            logger.error(traceback.format_exc())
-            return []
+        self.SECTION_WIDTH = 0.5  # metros
+        self.SECTION_HEIGHT = 0.3  # metros
+        self.MAX_SECTIONS_X = 3
+        self.MAX_SECTIONS_Y = 1
+        self.SCALE_FACTOR = 1  # Não precisa mais de escala
+        self.sections = [
+            {
+                'section_id': 1,
+                'section_name': 'Seção 1',
+                'product_id': '1',
+                'x_start': 0.0,
+                'y_start': 0.0,
+                'x_end': 0.5,
+                'y_end': 1.5
+            },
+            {
+                'section_id': 2,
+                'section_name': 'Seção 2',
+                'product_id': '2',
+                'x_start': 0.5,
+                'y_start': 0.0,
+                'x_end': 1.0,
+                'y_end': 1.5
+            },
+            {
+                'section_id': 3,
+                'section_name': 'Seção 3',
+                'product_id': '3',
+                'x_start': 1.0,
+                'y_start': 0.0,
+                'x_end': 1.5,
+                'y_end': 1.5
+            }
+        ]
 
-# Instância global do gerenciador de seções
+    def get_section_at_position(self, x, y, db_manager=None):
+        if x < -1.0 or x > 1.0 or y < 0 or y > 1.5:
+            return None
+        for section in self.sections:
+            if (section['x_start'] <= x <= section['x_end'] and section['y_start'] <= y <= section['y_end']):
+                return section
+        return None
+
 shelf_manager = ShelfManager()
-
-# Configurações do MySQL
-db_config = {
-    "host": os.getenv("DB_HOST", "168.75.89.11"),
-    "user": os.getenv("DB_USER", "belugaDB"),
-    "password": os.getenv("DB_PASSWORD", "Rpcr@300476"),
-    "database": os.getenv("DB_NAME", "Beluga_Analytics"),
-    "port": int(os.getenv("DB_PORT", 3306)),
-    "use_pure": True,
-    "ssl_disabled": True
-}
-
-class DatabaseManager:
-    def __init__(self):
-        self.conn = None
-        self.cursor = None
-        self.last_sequence = 0
-        self.last_move_speed = None
-        self.connect_with_retry()
-        
-    def connect_with_retry(self, max_attempts=5):
-        """Tenta conectar ao banco com retry"""
-        attempt = 0
-        while attempt < max_attempts:
-            try:
-                attempt += 1
-                logger.info(f"Tentativa {attempt} de {max_attempts} para conectar ao banco...")
-                
-                if self.conn:
-                    try:
-                        self.conn.close()
-                    except:
-                        pass
-                
-                self.conn = mysql.connector.connect(**db_config)
-                self.cursor = self.conn.cursor(dictionary=True, buffered=True)
-                
-                # Testar conexão
-                self.cursor.execute("SELECT 1")
-                self.cursor.fetchone()
-                
-                logger.info("✅ Conexão estabelecida com sucesso!")
-                self.initialize_database()
-                return True
-                
-            except Exception as e:
-                logger.error(f"❌ Tentativa {attempt} falhou: {str(e)}")
-                if attempt == max_attempts:
-                    logger.error("Todas as tentativas de conexão falharam!")
-                    raise
-                time.sleep(2)
-        return False
-
-    def initialize_database(self):
-        """Inicializa o banco de dados e cria as tabelas necessárias"""
-        try:
-            # Verificar tabela radar_dados
-            logger.info("Verificando tabela radar_dados...")
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS radar_dados (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    x_point FLOAT,
-                    y_point FLOAT,
-                    move_speed FLOAT,
-                    heart_rate FLOAT,
-                    breath_rate FLOAT,
-                    satisfaction_score FLOAT,
-                    satisfaction_class VARCHAR(20),
-                    is_engaged BOOLEAN,
-                    engagement_duration INT,
-                    session_id VARCHAR(36),
-                    section_id INT,
-                    product_id VARCHAR(20),
-                    timestamp DATETIME,
-                    serial_number VARCHAR(20)
-                )
-            """)
-            self.conn.commit()
-            logger.info("✅ Tabela radar_dados criada/verificada com sucesso!")
-
-            # Verificar tabela radar_sessoes
-            logger.info("Verificando tabela radar_sessoes...")
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS radar_sessoes (
-                    session_id VARCHAR(50) PRIMARY KEY,
-                    start_time DATETIME,
-                    end_time DATETIME,
-                    duration INT,
-                    avg_heart_rate FLOAT,
-                    avg_breath_rate FLOAT,
-                    avg_satisfaction FLOAT,
-                    satisfaction_class VARCHAR(20),
-                    is_engaged BOOLEAN,
-                    data_points INT
-                )
-            """)
-            self.conn.commit()
-            logger.info("✅ Tabela radar_sessoes criada/verificada com sucesso!")
-
-            # Verificar tabela shelf_sections
-            logger.info("Verificando tabela shelf_sections...")
-            self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS shelf_sections (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    section_name VARCHAR(50),
-                    x_start FLOAT,
-                    y_start FLOAT,
-                    x_end FLOAT,
-                    y_end FLOAT,
-                    product_id VARCHAR(50),
-                    product_name VARCHAR(100),
-                    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    is_active BOOLEAN DEFAULT TRUE
-                )
-            """)
-            self.conn.commit()
-            logger.info("✅ Tabela shelf_sections criada/verificada com sucesso!")
-
-            logger.info("✅ Banco de dados inicializado com sucesso!")
-            return True
-
-        except Exception as e:
-            logger.error(f"❌ Erro ao inicializar banco: {str(e)}")
-            return False
-
-    def ensure_device_exists(self, serial_number, nome=None, tipo=None):
-        """Garante que o dispositivo existe no banco"""
-        try:
-            # Verificar se o dispositivo já existe
-            self.cursor.execute("""
-                SELECT serial_number FROM Dispositivos
-                WHERE serial_number = %s
-            """, (serial_number,))
-            
-            device = self.cursor.fetchone()
-            
-            if not device:
-                # Inserir novo dispositivo
-                logger.info(f"Inserindo novo dispositivo: {serial_number}")
-                self.cursor.execute("""
-                    INSERT INTO Dispositivos (serial_number, nome, tipo)
-                    VALUES (%s, %s, %s)
-                """, (
-                    serial_number,
-                    nome or f"Radar {serial_number}",
-                    tipo or "RADAR"
-                ))
-                self.conn.commit()
-                logger.info(f"✅ Dispositivo {serial_number} inserido com sucesso!")
-            
-            return True
-        except Exception as e:
-            logger.error(f"❌ Erro ao verificar/inserir dispositivo: {str(e)}")
-            return False
-
-    def insert_data(self, data, analytics_data=None):
-        """Insere dados no banco"""
-        max_retries = 3
-        retry_delay = 1  # segundos
-        
-        for attempt in range(max_retries):
-            try:
-                logger.info("="*50)
-                logger.info("Iniciando inserção de dados no banco...")
-                
-                # Verificar conexão antes de inserir
-                if not self.conn or not self.conn.is_connected():
-                    logger.info("Conexão não disponível, tentando reconectar...")
-                    self.connect_with_retry()
-                
-                # Garantir que o dispositivo existe
-                serial_number = data.get('serial_number', 'RADAR_1')
-                if not self.ensure_device_exists(serial_number):
-                    return False
-                
-                # Valores padrão para analytics
-                satisfaction_score = None
-                satisfaction_class = None
-                is_engaged = False
-                engagement_duration = 0
-                
-                # Extrair dados de analytics se disponíveis
-                if analytics_data:
-                    if 'satisfaction' in analytics_data:
-                        satisfaction_score = analytics_data['satisfaction'].get('score')
-                        satisfaction_class = analytics_data['satisfaction'].get('classification')
-                    is_engaged = bool(analytics_data.get('engaged', False))
-                    engagement_duration = int(analytics_data.get('engagement_duration', 0))
-                
-                # Verificar se o dado tem o campo is_engaged (prioridade sobre analytics)
-                if 'is_engaged' in data and data['is_engaged'] is not None:
-                    is_engaged = bool(data['is_engaged'])
-                    logger.info(f"Campo is_engaged encontrado nos dados: {is_engaged}")
-                
-                # Inserir dados com transaction
-                self.cursor.execute("START TRANSACTION")
-                
-                query = """
-                    INSERT INTO radar_dados
-                    (x_point, y_point, move_speed, heart_rate, breath_rate,
-                    satisfaction_score, satisfaction_class, is_engaged, engagement_duration,
-                    session_id, section_id, product_id, serial_number, timestamp)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """
-                
-                values = (
-                    data['x_point'], data['y_point'], data['move_speed'],
-                    data['heart_rate'], data['breath_rate'],
-                    satisfaction_score, satisfaction_class, is_engaged, engagement_duration,
-                    data.get('session_id'), data.get('section_id'), data.get('product_id'),
-                    serial_number, datetime.now()
-                )
-                
-                self.cursor.execute(query, values)
-                self.conn.commit()
-                
-                logger.info("✅ Dados inseridos com sucesso!")
-                return True
-                
-            except mysql.connector.Error as err:
-                if err.errno == 1205:  # Lock timeout error
-                    if attempt < max_retries - 1:
-                        logger.warning(f"Lock timeout, tentativa {attempt + 1} de {max_retries}")
-                        time.sleep(retry_delay)
-                        continue
-                logger.error(f"❌ Erro MySQL ao inserir dados: {err}")
-                try:
-                    self.conn.rollback()
-                except:
-                    pass
-                return False
-                
-            except Exception as e:
-                logger.error(f"❌ Erro ao inserir dados: {e}")
-                try:
-                    self.conn.rollback()
-                except:
-                    pass
-                return False
-                
-        return False
-
-    def get_last_records(self, limit=5):
-        """Obtém últimos registros"""
-        try:
-            if not self.conn or not self.conn.is_connected():
-                self.connect_with_retry()
-                
-            query = """
-                SELECT * FROM radar_dados
-                ORDER BY timestamp DESC 
-                LIMIT %s
-            """
-            
-            self.cursor.execute(query, (limit,))
-            records = self.cursor.fetchall()
-            
-            # Converter datetime para string
-            for record in records:
-                if isinstance(record['timestamp'], datetime):
-                    record['timestamp'] = record['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
-            
-            return records
-        except Exception as e:
-            logger.error(f"Erro ao buscar registros: {str(e)}")
-            return []
-
-    def save_session_summary(self, session_data):
-        """Salva o resumo da sessão no banco de dados"""
-        try:
-            logger.info("="*50)
-            logger.info(f"Salvando resumo da sessão {session_data['session_id']}...")
-            
-            # Verificar conexão antes de inserir
-            if not self.conn or not self.conn.is_connected():
-                logger.info("Conexão não disponível, tentando reconectar...")
-                self.connect_with_retry()
-            
-            # Preparar query
-            query = """
-                INSERT INTO radar_sessoes
-                (session_id, start_time, end_time, duration, avg_heart_rate, 
-                 avg_breath_rate, avg_satisfaction, satisfaction_class, is_engaged, data_points)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                end_time = VALUES(end_time),
-                duration = VALUES(duration),
-                avg_heart_rate = VALUES(avg_heart_rate),
-                avg_breath_rate = VALUES(avg_breath_rate),
-                avg_satisfaction = VALUES(avg_satisfaction),
-                satisfaction_class = VALUES(satisfaction_class),
-                is_engaged = VALUES(is_engaged),
-                data_points = VALUES(data_points)
-            """
-            
-            # Determinar classificação de satisfação
-            satisfaction_class = "NEUTRA"
-            if session_data.get('avg_satisfaction') is not None:
-                if session_data['avg_satisfaction'] >= 70:
-                    satisfaction_class = "POSITIVA"
-                elif session_data['avg_satisfaction'] <= 40:
-                    satisfaction_class = "NEGATIVA"
-            
-            # Preparar parâmetros
-            start_time = session_data.get('start_time')
-            end_time = session_data.get('end_time')
-            
-            # Converter para string se for datetime
-            if isinstance(start_time, datetime):
-                start_time = start_time.strftime('%Y-%m-%d %H:%M:%S')
-            if isinstance(end_time, datetime):
-                end_time = end_time.strftime('%Y-%m-%d %H:%M:%S')
-            
-            params = (
-                session_data.get('session_id'),
-                start_time,
-                end_time,
-                float(session_data.get('duration', 0)),
-                float(session_data.get('avg_heart_rate', 0)) if session_data.get('avg_heart_rate') is not None else None,
-                float(session_data.get('avg_breath_rate', 0)) if session_data.get('avg_breath_rate') is not None else None,
-                float(session_data.get('avg_satisfaction', 0)) if session_data.get('avg_satisfaction') is not None else None,
-                satisfaction_class,
-                bool(session_data.get('is_engaged', False)),
-                len(session_data.get('positions', []))
-            )
-            
-            logger.info(f"Query SQL: {query}")
-            logger.info(f"Parâmetros: {params}")
-            
-            # Executar inserção
-            self.cursor.execute(query, params)
-            self.conn.commit()
-            
-            logger.info(f"✅ Resumo da sessão {session_data['session_id']} salvo com sucesso!")
-            logger.info("="*50)
-            return True
-            
-        except Exception as e:
-            logger.error("="*50)
-            logger.error(f"❌ Erro ao salvar resumo da sessão: {str(e)}")
-            logger.error(f"Stack trace: {traceback.format_exc()}")
-            logger.error(f"Dados da sessão: {session_data}")
-            logger.error("="*50)
-            raise
-
-    def get_sessions(self, limit=10):
-        """Obtém as sessões mais recentes"""
-        try:
-            if not self.conn or not self.conn.is_connected():
-                self.connect_with_retry()
-                
-            query = """
-                SELECT * FROM radar_sessoes
-                ORDER BY end_time DESC 
-                LIMIT %s
-            """
-            
-            self.cursor.execute(query, (limit,))
-            sessions = self.cursor.fetchall()
-            
-            # Converter datetime para string
-            for session in sessions:
-                if isinstance(session['start_time'], datetime):
-                    session['start_time'] = session['start_time'].strftime('%Y-%m-%d %H:%M:%S')
-                if isinstance(session['end_time'], datetime):
-                    session['end_time'] = session['end_time'].strftime('%Y-%m-%d %H:%M:%S')
-            
-            return sessions
-        except Exception as e:
-            logger.error(f"Erro ao buscar sessões: {str(e)}")
-            logger.error(traceback.format_exc())
-            return []
-            
-    def get_session_by_id(self, session_id):
-        """Obtém uma sessão específica pelo ID"""
-        try:
-            if not self.conn or not self.conn.is_connected():
-                self.connect_with_retry()
-                
-            # Buscar resumo da sessão
-            query_session = """
-                SELECT * FROM radar_sessoes
-                WHERE session_id = %s
-            """
-            
-            self.cursor.execute(query_session, (session_id,))
-            session = self.cursor.fetchone()
-            
-            if not session:
-                return None
-                
-            # Converter datetime para string
-            if isinstance(session['start_time'], datetime):
-                session['start_time'] = session['start_time'].strftime('%Y-%m-%d %H:%M:%S')
-            if isinstance(session['end_time'], datetime):
-                session['end_time'] = session['end_time'].strftime('%Y-%m-%d %H:%M:%S')
-            
-            # Buscar pontos de dados da sessão
-            query_points = """
-                SELECT * FROM radar_dados
-                WHERE session_id = %s
-                ORDER BY timestamp ASC
-            """
-            
-            self.cursor.execute(query_points, (session_id,))
-            points = self.cursor.fetchall()
-            
-            # Converter datetime para string nos pontos
-            for point in points:
-                if isinstance(point['timestamp'], datetime):
-                    point['timestamp'] = point['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
-            
-            # Adicionar pontos à sessão
-            session['data_points'] = points
-            
-            return session
-        except Exception as e:
-            logger.error(f"Erro ao buscar sessão {session_id}: {str(e)}")
-            logger.error(traceback.format_exc())
-            return None
-
-    def get_active_session(self, x_point, y_point, move_speed, timestamp):
-        """Verifica se existe uma sessão ativa para as coordenadas fornecidas"""
-        try:
-            # Buscar a última sessão registrada nos últimos 5 minutos
-            query = """
-                SELECT DISTINCT session_id, timestamp
-                FROM radar_dados
-                WHERE timestamp >= DATE_SUB(%s, INTERVAL 5 MINUTE)
-                AND ABS(x_point - %s) < 0.5
-                AND ABS(y_point - %s) < 0.5
-                ORDER BY timestamp DESC
-                LIMIT 1
-            """
-            
-            self.cursor.execute(query, (timestamp, x_point, y_point))
-            result = self.cursor.fetchone()
-            
-            if result:
-                logger.info(f"Sessão ativa encontrada: {result['session_id']}")
-                return result['session_id']
-            
-            return None
-            
-        except Exception as e:
-            logger.error(f"Erro ao buscar sessão ativa: {str(e)}")
-            logger.error(traceback.format_exc())
-            return None
-
-    def insert_radar_data(self, data, attempt=0, max_retries=3, retry_delay=1):
-        """Insere dados do radar no banco de dados"""
-        try:
-            # Query de inserção
-            query = """
-                INSERT INTO radar_dados
-                (x_point, y_point, move_speed, heart_rate, breath_rate, 
-                satisfaction_score, satisfaction_class, is_engaged, engagement_duration, 
-                session_id, section_id, product_id, timestamp, serial_number)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            
-            # Preparar parâmetros
-            params = (
-                float(data.get('x_point')),
-                float(data.get('y_point')),
-                float(data.get('move_speed')),
-                float(data.get('heart_rate')) if data.get('heart_rate') is not None else None,
-                float(data.get('breath_rate')) if data.get('breath_rate') is not None else None,
-                float(data.get('satisfaction_score', 0)),
-                data.get('satisfaction_class', 'NEUTRA'),
-                bool(data.get('is_engaged', False)),
-                int(data.get('engagement_duration', 0)),
-                data.get('session_id'),
-                int(data.get('section_id', 1)),
-                data.get('product_id', 'UNKNOWN'),
-                data.get('timestamp', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
-                data.get('serial_number', 'RADAR_1')
-            )
-            
-            logger.info(f"Query: {query}")
-            logger.info(f"Parâmetros: {params}")
-            
-            # Executar inserção com retry em caso de deadlock
-            try:
-                self.cursor.execute(query, params)
-                self.conn.commit()
-                logger.info("✅ Dados inseridos com sucesso!")
-                return True
-            except mysql.connector.errors.DatabaseError as e:
-                if e.errno == 1205 and attempt < max_retries - 1:  # Lock timeout error
-                    logger.warning(f"Lock timeout na tentativa {attempt + 1}, tentando novamente em {retry_delay} segundos...")
-                    time.sleep(retry_delay)
-                    return self.insert_radar_data(data, attempt + 1, max_retries, retry_delay)
-                raise
-                
-        except Exception as e:
-            logger.error(f"❌ Erro ao inserir dados: {str(e)}")
-            logger.error(traceback.format_exc())
-            if attempt < max_retries - 1:
-                logger.info(f"Tentando novamente em {retry_delay} segundos...")
-                time.sleep(retry_delay)
-                return self.insert_radar_data(data, attempt + 1, max_retries, retry_delay)
-            return False
-
-# Instância global do gerenciador de banco de dados
-try:
-    logger.info("Iniciando DatabaseManager...")
-    db_manager = DatabaseManager()
-    logger.info("✅ DatabaseManager iniciado com sucesso!")
-except Exception as e:
-    logger.error(f"❌ Erro ao criar instância do DatabaseManager: {e}")
-    logger.error(traceback.format_exc())
-    db_manager = None
 
 class AnalyticsManager:
     def __init__(self):
-        # Constantes para engajamento
-        self.ENGAGEMENT_TIME_THRESHOLD = 5  # segundos
-        self.MOVEMENT_THRESHOLD = 20.0  # limite para considerar "parado" em cm/s
-        self.ENGAGEMENT_MIN_DURATION = 5  # duração mínima para considerar engajamento completo
-        
-        # Constantes para satisfação
-        self.HEART_RATE_MIN = 60
-        self.HEART_RATE_MAX = 100
-        self.HEART_RATE_IDEAL = 75
-        
-        self.BREATH_RATE_MIN = 12
-        self.BREATH_RATE_MAX = 20
-        self.BREATH_RATE_IDEAL = 15
-        
-        # Pesos para o cálculo de satisfação
-        self.WEIGHT_HEART_RATE = 0.5
-        self.WEIGHT_RESP_RATE = 0.5
-        
-        # Rastreamento de engajamento
-        self.engagement_start_time = None
-        self.last_movement_time = None
+        self.MOVEMENT_THRESHOLD = 20.0  # cm/s
+        self.DISTANCE_THRESHOLD = 2.0   # metros
+        self.HEART_RATE_NORMAL = (60, 100)  # bpm
+        self.BREATH_RATE_NORMAL = (12, 20)  # rpm
 
-    def calculate_satisfaction_score(self, move_speed, heart_rate, breath_rate, previous_heart_rates=None):
-        """
-        Calcula o score de satisfação baseado nas métricas do radar e VFC
-        Retorna: (score, classificação)
-        """
+    def calculate_satisfaction_score(self, move_speed, heart_rate, breath_rate, distance):
         try:
-            # Calcular VFC se houver histórico de batimentos cardíacos
-            vfc_score = 0
-            if previous_heart_rates and len(previous_heart_rates) > 1:
-                # Calcular a variabilidade entre os últimos batimentos
-                vfc = np.std(previous_heart_rates[-5:])  # Usar últimos 5 valores
-                vfc_score = min(1.0, vfc / 10.0)  # Normalizar VFC (assumindo variação máxima de 10 bpm)
-            
-            # Normalizar as métricas para uma escala de 0-1
-            # Usar faixas mais amplas para considerar variações individuais
-            move_speed_norm = min(1.0, move_speed / 30.0)  # Velocidade máxima considerada: 30 cm/s
-            heart_rate_norm = max(0.0, min(1.0, (heart_rate - 50) / 50))  # Faixa mais ampla: 50-100 bpm
-            breath_rate_norm = max(0.0, min(1.0, (breath_rate - 10) / 15))  # Faixa mais ampla: 10-25 rpm
-            
-            # Pesos atualizados baseados no estudo
-            WEIGHTS = {
-                'move_speed': 0.3,     # Velocidade tem peso médio
-                'heart_rate': 0.3,     # Frequência cardíaca tem peso médio
-                'breath_rate': 0.2,    # Respiração tem peso menor
-                'vfc': 0.2             # VFC tem peso significativo
-            }
-            
-            # Calcular score ponderado (0-100)
-            score = 100 * (
-                WEIGHTS['move_speed'] * (1 - move_speed_norm) +  # Menor velocidade = maior satisfação
-                WEIGHTS['heart_rate'] * (1 - heart_rate_norm) +  # Menor freq cardíaca = maior satisfação
-                WEIGHTS['breath_rate'] * (1 - breath_rate_norm) +  # Menor freq respiratória = maior satisfação
-                WEIGHTS['vfc'] * vfc_score  # Maior VFC = maior satisfação
-            )
-            
-            # Classificar o score com níveis mais granulares
+            score = 0.0
+            if move_speed is not None:
+                if move_speed <= self.MOVEMENT_THRESHOLD:
+                    score += 30
+                else:
+                    score += max(0, 30 * (1 - move_speed/100))
+            if distance is not None:
+                if distance <= self.DISTANCE_THRESHOLD:
+                    score += 20
+                else:
+                    score += max(0, 20 * (1 - distance/5))
+            if heart_rate is not None:
+                if self.HEART_RATE_NORMAL[0] <= heart_rate <= self.HEART_RATE_NORMAL[1]:
+                    score += 25
+                else:
+                    deviation = min(
+                        abs(heart_rate - self.HEART_RATE_NORMAL[0]),
+                        abs(heart_rate - self.HEART_RATE_NORMAL[1])
+                    )
+                    score += max(0, 25 * (1 - deviation/50))
+            if breath_rate is not None:
+                if self.BREATH_RATE_NORMAL[0] <= breath_rate <= self.BREATH_RATE_NORMAL[1]:
+                    score += 25
+                else:
+                    deviation = min(
+                        abs(breath_rate - self.BREATH_RATE_NORMAL[0]),
+                        abs(breath_rate - self.BREATH_RATE_NORMAL[1])
+                    )
+                    score += max(0, 25 * (1 - deviation/20))
             if score >= 85:
-                satisfaction_class = 'Muito Satisfeito'
+                classification = "MUITO_POSITIVA"
             elif score >= 70:
-                satisfaction_class = 'Satisfeito'
-            elif score >= 55:
-                satisfaction_class = 'Levemente Satisfeito'
-            elif score >= 40:
-                satisfaction_class = 'Neutro'
-            elif score >= 25:
-                satisfaction_class = 'Levemente Insatisfeito'
-            elif score >= 10:
-                satisfaction_class = 'Insatisfeito'
+                classification = "POSITIVA"
+            elif score >= 50:
+                classification = "NEUTRA"
+            elif score >= 30:
+                classification = "NEGATIVA"
             else:
-                satisfaction_class = 'Muito Insatisfeito'
-                
-            logger.info(f"📊 Score de satisfação calculado:")
-            logger.info(f"   Score: {score:.1f}/100")
-            logger.info(f"   Classificação: {satisfaction_class}")
-            logger.info(f"   Métricas normalizadas: movimento={move_speed_norm:.2f}, cardíaca={heart_rate_norm:.2f}, respiração={breath_rate_norm:.2f}, VFC={vfc_score:.2f}")
-            
-            return score, satisfaction_class
-            
+                classification = "MUITO_NEGATIVA"
+            return (score, classification)
         except Exception as e:
-            logger.error(f"❌ Erro ao calcular satisfação: {str(e)}")
-            logger.error(traceback.format_exc())
-            return 50, 'Neutro'  # Valor padrão em caso de erro
+            logger.error(f"Erro ao calcular satisfação: {str(e)}")
+            return (50.0, "NEUTRA")
 
-    def calculate_engagement(self, records):
-        """
-        Calcula engajamento baseado no histórico de registros
-        Retorna: 
-        - is_engaged: booleano indicando se está engajado
-        - duration: duração do engajamento em segundos
-        """
-        if not records or len(records) < 2:
-            logger.info("Não há registros suficientes para calcular engajamento")
-            return False, 0
-
-        # Ordenar registros por timestamp
-        records = sorted(records, key=lambda x: x['timestamp'])
-        
-        # Verificar se há movimento contínuo baixo
-        engagement_start = None
-        last_low_movement = None
-        
-        for record in records:
-            move_speed = float(record['move_speed'])
-            current_time = datetime.strptime(record['timestamp'], '%Y-%m-%d %H:%M:%S')
-            
-            if move_speed <= self.MOVEMENT_THRESHOLD:
-                if not engagement_start:
-                    engagement_start = current_time
-                last_low_movement = current_time
-            else:
-                # Reset se movimento for alto
-                engagement_start = None
-
-        # Calcular duração se houver engajamento
-        if engagement_start and last_low_movement:
-            duration = (last_low_movement - engagement_start).total_seconds()
-            is_engaged = duration >= self.ENGAGEMENT_MIN_DURATION
-            
-            logger.info(f"Engajamento calculado: {is_engaged} (duração: {duration:.1f}s)")
-            return is_engaged, int(duration)
-
-        return False, 0
-
-# Instância global do analytics manager
-analytics_manager = AnalyticsManager()
-
-class UserSessionManager:
+class VitalSignsManager:
     def __init__(self):
-        # Constantes para detecção de entrada/saída
-        self.PRESENCE_THRESHOLD = 2.0  # Distância máxima para considerar presença (metros)
-        self.MOVEMENT_THRESHOLD = 50.0  # Movimento máximo para considerar "parado" em cm/s
-        self.ABSENCE_THRESHOLD = 3.0   # Distância mínima para considerar ausência (metros)
-        self.TIME_THRESHOLD = 2        # Tempo mínimo (segundos) para considerar uma nova sessão
-        self.DISTANCE_THRESHOLD = 1.0  # Distância mínima entre clientes diferentes (metros)
-        
-        # Dicionário para armazenar sessões ativas
-        self.active_sessions = {}  # {session_id: session_data}
-        self.session_positions = {}  # {session_id: (last_x, last_y)}
-        
-    def find_closest_session(self, x, y, timestamp):
-        """
-        Encontra a sessão mais próxima das coordenadas fornecidas
-        Retorna: (session_id, distance) ou (None, None) se nenhuma sessão próxima for encontrada
-        """
-        closest_session = None
-        min_distance = float('inf')
-        
-        for session_id, last_pos in self.session_positions.items():
-            # Verificar se a sessão não está expirada (mais de 5 segundos sem atualização)
-            session_data = self.active_sessions[session_id]
-            if (timestamp - session_data['last_update']).total_seconds() > 5:
-                continue
-                
-            # Calcular distância euclidiana
-            distance = ((x - last_pos[0]) ** 2 + (y - last_pos[1]) ** 2) ** 0.5
-            
-            if distance < min_distance:
-                min_distance = distance
-                closest_session = session_id
-        
-        return closest_session, min_distance
-        
-    def detect_session(self, data, timestamp=None):
-        """
-        Detecta se uma pessoa entrou ou saiu da área da gôndola
-        Retorna: (session_id, event_type, session_data)
-        event_type pode ser: 'start', 'update', 'end', None
-        """
-        if timestamp is None:
-            try:
-                if 'timestamp' in data and data['timestamp']:
-                    timestamp = datetime.strptime(data['timestamp'], '%Y-%m-%d %H:%M:%S')
-                else:
-                    timestamp = datetime.now()
-            except Exception as e:
-                logger.error(f"Erro ao processar timestamp: {str(e)}")
-                timestamp = datetime.now()
-            
-        # Extrair dados relevantes
-        x_point = data.get('x_point')
-        y_point = data.get('y_point')
-        move_speed = data.get('move_speed', 999)
-        is_engaged = data.get('is_engaged', 0)
-        engagement_duration = data.get('engagement_duration', 0)
-        
-        # Calcular distância do centro (0,0)
-        distance = np.sqrt(x_point**2 + y_point**2) if x_point is not None and y_point is not None else None
-        
-        # Log para debug
-        logger.info(f"Detecção de sessão: x={x_point}, y={y_point}, move_speed={move_speed} cm/s, distância={distance} m")
-        
-        # Verificar se há dados suficientes
-        if distance is None:
-            return None, None, None
-            
-        # Buscar sessão mais próxima
-        closest_session_id, session_distance = self.find_closest_session(x_point, y_point, timestamp)
-        
-        # Se encontrou uma sessão próxima e a distância é menor que o threshold
-        if closest_session_id and session_distance <= self.DISTANCE_THRESHOLD:
-            session_data = self.active_sessions[closest_session_id]
-            session_data['last_update'] = timestamp
-            
-            # Atualizar posição
-            self.session_positions[closest_session_id] = (x_point, y_point)
-            
-            # Atualizar dados da sessão
-            if data.get('heart_rate') is not None:
-                session_data['heart_rates'].append(data.get('heart_rate'))
-            if data.get('breath_rate') is not None:
-                session_data['breath_rates'].append(data.get('breath_rate'))
-            if data.get('satisfaction_score') is not None:
-                session_data['satisfaction_scores'].append(data.get('satisfaction_score'))
-            
-            session_data['positions'].append((x_point, y_point))
-            session_data['move_speeds'].append(move_speed)
-            
-            # Verificar engajamento
-            if move_speed <= self.MOVEMENT_THRESHOLD:
-                if session_data.get('engagement_start_time') is None:
-                    session_data['engagement_start_time'] = timestamp
-                    session_data['is_engaged'] = 1
-                else:
-                    eng_duration = (timestamp - session_data['engagement_start_time']).total_seconds()
-                    session_data['engagement_duration'] = eng_duration
-                    if eng_duration >= 5:
-                        session_data['is_engaged'] = 2
-            else:
-                session_data['engagement_start_time'] = None
-            
-            # Verificar se a sessão deve ser finalizada
-            if distance >= self.ABSENCE_THRESHOLD:
-                # Calcular métricas finais
-                session_duration = (timestamp - session_data['start_time']).total_seconds()
-                if session_duration >= self.TIME_THRESHOLD:
-                    session_data['end_time'] = timestamp
-                    session_data['duration'] = session_duration
-                    session_data['avg_heart_rate'] = np.mean(session_data['heart_rates']) if session_data['heart_rates'] else None
-                    session_data['avg_breath_rate'] = np.mean(session_data['breath_rates']) if session_data['breath_rates'] else None
-                    session_data['avg_satisfaction'] = np.mean(session_data['satisfaction_scores']) if session_data['satisfaction_scores'] else None
-                    
-                    # Remover sessão das ativas
-                    self.active_sessions.pop(closest_session_id)
-                    self.session_positions.pop(closest_session_id)
-                    
-                    return closest_session_id, 'end', session_data
-            
-            return closest_session_id, 'update', session_data
-            
-        # Se não encontrou sessão próxima e está dentro da área de detecção
-        elif distance <= self.PRESENCE_THRESHOLD:
-            # Criar nova sessão
-            new_session_id = str(uuid.uuid4())
-            new_session = {
-                'session_id': new_session_id,
-                'start_time': timestamp,
-                'last_update': timestamp,
-                'heart_rates': [],
-                'breath_rates': [],
-                'positions': [(x_point, y_point)],
-                'move_speeds': [move_speed],
-                'satisfaction_scores': [],
-                'is_engaged': 0,
-                'engagement_duration': 0,
-                'engagement_start_time': None
-            }
-            
-            # Adicionar dados vitais se disponíveis
-            if data.get('heart_rate') is not None:
-                new_session['heart_rates'].append(data.get('heart_rate'))
-            if data.get('breath_rate') is not None:
-                new_session['breath_rates'].append(data.get('breath_rate'))
-            if data.get('satisfaction_score') is not None:
-                new_session['satisfaction_scores'].append(data.get('satisfaction_score'))
-            
-            # Armazenar nova sessão
-            self.active_sessions[new_session_id] = new_session
-            self.session_positions[new_session_id] = (x_point, y_point)
-            
-            logger.info(f"🟢 Nova sessão iniciada: {new_session_id}")
-            return new_session_id, 'start', new_session
-            
-        return None, None, None
-        
-    def cleanup_expired_sessions(self, current_time):
-        """Remove sessões expiradas (sem atualização por mais de 5 segundos)"""
-        expired_sessions = []
-        
-        for session_id, session_data in self.active_sessions.items():
-            if (current_time - session_data['last_update']).total_seconds() > 5:
-                expired_sessions.append(session_id)
-                
-        for session_id in expired_sessions:
-            session_data = self.active_sessions.pop(session_id)
-            self.session_positions.pop(session_id)
-            
-            # Calcular métricas finais
-            session_duration = (current_time - session_data['start_time']).total_seconds()
-            if session_duration >= self.TIME_THRESHOLD:
-                session_data['end_time'] = current_time
-                session_data['duration'] = session_duration
-                session_data['avg_heart_rate'] = np.mean(session_data['heart_rates']) if session_data['heart_rates'] else None
-                session_data['avg_breath_rate'] = np.mean(session_data['breath_rates']) if session_data['breath_rates'] else None
-                session_data['avg_satisfaction'] = np.mean(session_data['satisfaction_scores']) if session_data['satisfaction_scores'] else None
-                
-                logger.info(f"🔴 Sessão expirada finalizada: {session_id}, duração: {session_duration:.2f}s")
-                
-                # Salvar sessão no banco de dados
-                try:
-                    db_manager.save_session_summary(session_data)
-                except Exception as e:
-                    logger.error(f"Erro ao salvar sessão expirada: {str(e)}")
-
-# Instância global do gerenciador de sessões
-user_session_manager = UserSessionManager()
-
-class DataSmoother:
-    def __init__(self, window_size=5):
-        """
-        Inicializa o suavizador de dados
-        window_size: tamanho da janela para média móvel
-        """
-        self.window_size = window_size
+        self.SAMPLE_RATE = 20
+        self.heart_phase_buffer = []
+        self.breath_phase_buffer = []
+        self.quality_buffer = []
+        self.HEART_BUFFER_SIZE = 20
+        self.BREATH_BUFFER_SIZE = 30
+        self.QUALITY_BUFFER_SIZE = 10
+        self.last_heart_rate = None
+        self.last_breath_rate = None
+        self.last_quality_score = 0
+        self.MIN_QUALITY_SCORE = 0.3
+        self.STABILITY_THRESHOLD = 0.4
+        self.VALID_RANGES = {
+            'heart_rate': (40, 140),
+            'breath_rate': (8, 25)
+        }
         self.heart_rate_history = []
         self.breath_rate_history = []
-        
-    def smooth_heart_rate(self, heart_rate):
-        """Suaviza o valor de heart_rate usando média móvel"""
-        if heart_rate is None:
-            return None
-            
-        self.heart_rate_history.append(heart_rate)
-        if len(self.heart_rate_history) > self.window_size:
-            self.heart_rate_history.pop(0)
-            
-        if len(self.heart_rate_history) < 2:
-            return heart_rate
-            
-        return sum(self.heart_rate_history) / len(self.heart_rate_history)
-        
-    def smooth_breath_rate(self, breath_rate):
-        """Suaviza o valor de breath_rate usando média móvel"""
-        if breath_rate is None:
-            return None
-            
-        self.breath_rate_history.append(breath_rate)
-        if len(self.breath_rate_history) > self.window_size:
-            self.breath_rate_history.pop(0)
-            
-        if len(self.breath_rate_history) < 2:
-            return breath_rate
-            
-        return sum(self.breath_rate_history) / len(self.breath_rate_history)
-        
-    def detect_anomalies(self, heart_rate, breath_rate):
-        """
-        Detecta anomalias nos dados vitais
-        Retorna: (is_heart_anomaly, is_breath_anomaly)
-        """
-        if not self.heart_rate_history or not self.breath_rate_history:
-            return False, False
-            
-        # Calcular médias e desvios padrão
-        heart_mean = sum(self.heart_rate_history) / len(self.heart_rate_history)
-        breath_mean = sum(self.breath_rate_history) / len(self.breath_rate_history)
-        
-        heart_std = (sum((x - heart_mean) ** 2 for x in self.heart_rate_history) / len(self.heart_rate_history)) ** 0.5
-        breath_std = (sum((x - breath_mean) ** 2 for x in self.breath_rate_history) / len(self.breath_rate_history)) ** 0.5
-        
-        # Definir limites para detecção de anomalias (2 desvios padrão)
-        heart_threshold = 2 * heart_std
-        breath_threshold = 2 * breath_std
-        
-        # Verificar se os valores atuais são anomalias
-        is_heart_anomaly = heart_rate is not None and abs(heart_rate - heart_mean) > heart_threshold
-        is_breath_anomaly = breath_rate is not None and abs(breath_rate - breath_mean) > breath_threshold
-        
-        return is_heart_anomaly, is_breath_anomaly
+        self.HISTORY_SIZE = 10
 
-# Instância global do suavizador de dados
-data_smoother = DataSmoother()
-
-class AdaptiveSampler:
-    def __init__(self):
-        # Configurações de amostragem
-        self.HIGH_ACTIVITY_THRESHOLD = 30.0  # cm/s - acima disso é considerado movimento significativo
-        self.LOW_ACTIVITY_THRESHOLD = 10.0   # cm/s - abaixo disso é considerado movimento mínimo
-        
-        # Intervalos de amostragem em milissegundos
-        self.HIGH_ACTIVITY_INTERVAL = 200    # 5 amostras por segundo para atividade alta
-        self.MEDIUM_ACTIVITY_INTERVAL = 500  # 2 amostras por segundo para atividade média
-        self.LOW_ACTIVITY_INTERVAL = 1000    # 1 amostra por segundo para atividade baixa
-        self.IDLE_INTERVAL = 2000            # 1 amostra a cada 2 segundos para inatividade
-        
-        # Estado atual
-        self.current_sampling_interval = self.MEDIUM_ACTIVITY_INTERVAL
-        self.last_sample_time = None
-        self.last_movement_speed = 0
-        self.consecutive_idle_count = 0
-        self.max_idle_count = 5  # Número máximo de amostras consecutivas em estado de inatividade
-        
-    def should_sample(self, current_time, movement_speed):
-        """
-        Determina se devemos coletar uma amostra com base na atividade atual
-        Retorna: (bool, int) - se deve amostrar e o próximo intervalo recomendado
-        """
-        # Na primeira chamada, sempre amostrar
-        if self.last_sample_time is None:
-            self.last_sample_time = current_time
-            return True, self.MEDIUM_ACTIVITY_INTERVAL
-        
-        # Calcular tempo decorrido desde a última amostra
-        elapsed_time = (current_time - self.last_sample_time).total_seconds() * 1000  # em ms
-        
-        # Determinar o intervalo de amostragem com base na velocidade de movimento
-        if movement_speed > self.HIGH_ACTIVITY_THRESHOLD:
-            # Atividade alta - amostragem frequente
-            self.current_sampling_interval = self.HIGH_ACTIVITY_INTERVAL
-            self.consecutive_idle_count = 0
-            logger.info(f"Atividade alta detectada: {movement_speed:.1f} cm/s - amostragem a cada {self.current_sampling_interval} ms")
-        elif movement_speed > self.LOW_ACTIVITY_THRESHOLD:
-            # Atividade média - amostragem normal
-            self.current_sampling_interval = self.MEDIUM_ACTIVITY_INTERVAL
-            self.consecutive_idle_count = 0
-            logger.info(f"Atividade média detectada: {movement_speed:.1f} cm/s - amostragem a cada {self.current_sampling_interval} ms")
-        else:
-            # Atividade baixa ou inatividade
-            if movement_speed <= self.LOW_ACTIVITY_THRESHOLD / 2:
-                # Incrementar contador de inatividade
-                self.consecutive_idle_count += 1
+    def calculate_signal_quality(self, phase_data, distance):
+        try:
+            if not phase_data or len(phase_data) < 1:
+                return 0.0
                 
-                # Após várias amostras consecutivas de inatividade, reduzir ainda mais a frequência
-                if self.consecutive_idle_count >= self.max_idle_count:
-                    self.current_sampling_interval = self.IDLE_INTERVAL
-                    logger.info(f"Inatividade prolongada: {movement_speed:.1f} cm/s - amostragem a cada {self.current_sampling_interval} ms")
+            # Se for um único valor, criar uma lista com ele
+            if isinstance(phase_data, (int, float)):
+                phase_data = [phase_data]
+                
+            distance_score = 1.0
+            if distance < 30 or distance > 150:
+                distance_score = 0.0
+            elif distance > 100:
+                distance_score = 1.0 - ((distance - 100) / 50)
+                
+            # Para um único valor, usar uma variância mínima
+            variance = 0.1 if len(phase_data) == 1 else np.var(phase_data)
+            variance_score = 1.0 / (1.0 + variance * 10)
+            
+            # Para um único valor, usar uma amplitude mínima
+            amplitude = 0.1 if len(phase_data) == 1 else np.ptp(phase_data)
+            amplitude_score = 1.0
+            if amplitude < 0.01 or amplitude > 1.0:
+                amplitude_score = 0.5
+                
+            quality_score = (distance_score * 0.3 +
+                           variance_score * 0.4 +
+                           amplitude_score * 0.3)
+                           
+            self.quality_buffer.append(quality_score)
+            if len(self.quality_buffer) > self.QUALITY_BUFFER_SIZE:
+                self.quality_buffer.pop(0)
+                
+            self.last_quality_score = np.mean(self.quality_buffer)
+            return self.last_quality_score
+            
+        except Exception as e:
+            logger.error(f"Erro ao calcular qualidade do sinal: {str(e)}")
+            return 0.0
+
+    def calculate_vital_signs(self, total_phase, breath_phase, heart_phase, distance):
+        try:
+            # Converter os valores de fase para listas se forem floats
+            if isinstance(heart_phase, (int, float)):
+                heart_phase = [heart_phase]
+            if isinstance(breath_phase, (int, float)):
+                breath_phase = [breath_phase]
+                
+            quality_score = self.calculate_signal_quality(heart_phase, distance)
+            if quality_score < self.MIN_QUALITY_SCORE:
+                return None, None
+            self.heart_phase_buffer.append(heart_phase)
+            self.breath_phase_buffer.append(breath_phase)
+            while len(self.heart_phase_buffer) > self.HEART_BUFFER_SIZE:
+                self.heart_phase_buffer.pop(0)
+            while len(self.breath_phase_buffer) > self.BREATH_BUFFER_SIZE:
+                self.breath_phase_buffer.pop(0)
+            if len(self.heart_phase_buffer) < self.HEART_BUFFER_SIZE * 0.7:
+                return None, None
+            heart_weights = np.hamming(len(self.heart_phase_buffer))
+            breath_weights = np.hamming(len(self.breath_phase_buffer))
+            heart_smooth = np.average(self.heart_phase_buffer, weights=heart_weights)
+            breath_smooth = np.average(self.breath_phase_buffer, weights=breath_weights)
+            heart_rate = self._calculate_rate_from_phase(
+                self.heart_phase_buffer,
+                min_freq=self.VALID_RANGES['heart_rate'][0]/60,
+                max_freq=self.VALID_RANGES['heart_rate'][1]/60,
+                rate_multiplier=60
+            )
+            breath_rate = self._calculate_rate_from_phase(
+                self.breath_phase_buffer,
+                min_freq=self.VALID_RANGES['breath_rate'][0]/60,
+                max_freq=self.VALID_RANGES['breath_rate'][1]/60,
+                rate_multiplier=60
+            )
+            if heart_rate:
+                if self.last_heart_rate:
+                    rate_change = abs(heart_rate - self.last_heart_rate) / self.last_heart_rate
+                    if rate_change > self.STABILITY_THRESHOLD:
+                        heart_rate = (heart_rate + self.last_heart_rate) / 2
+                    else:
+                        self.last_heart_rate = heart_rate
                 else:
-                    self.current_sampling_interval = self.LOW_ACTIVITY_INTERVAL
-                    logger.info(f"Atividade baixa detectada: {movement_speed:.1f} cm/s - amostragem a cada {self.current_sampling_interval} ms")
-            else:
-                self.current_sampling_interval = self.LOW_ACTIVITY_INTERVAL
-                logger.info(f"Atividade baixa detectada: {movement_speed:.1f} cm/s - amostragem a cada {self.current_sampling_interval} ms")
-        
-        # Verificar se o tempo decorrido é maior que o intervalo atual
-        should_sample = elapsed_time >= self.current_sampling_interval
-        
-        # Mudanças abruptas na velocidade sempre devem ser amostradas
-        if abs(movement_speed - self.last_movement_speed) > self.HIGH_ACTIVITY_THRESHOLD:
-            logger.info(f"Mudança abrupta na velocidade detectada: {self.last_movement_speed:.1f} -> {movement_speed:.1f} cm/s")
-            should_sample = True
-        
-        # Atualizar estado se for amostrar
-        if should_sample:
-            self.last_sample_time = current_time
-            self.last_movement_speed = movement_speed
-        
-        return should_sample, self.current_sampling_interval
-        
-    def reset(self):
-        """Reinicia o estado do amostrador"""
-        self.last_sample_time = None
-        self.last_movement_speed = 0
-        self.consecutive_idle_count = 0
-        self.current_sampling_interval = self.MEDIUM_ACTIVITY_INTERVAL
+                    self.last_heart_rate = heart_rate
+                self.heart_rate_history.append(heart_rate)
+                if len(self.heart_rate_history) > self.HISTORY_SIZE:
+                    self.heart_rate_history.pop(0)
+            if breath_rate:
+                if self.last_breath_rate:
+                    rate_change = abs(breath_rate - self.last_breath_rate) / self.last_breath_rate
+                    if rate_change > self.STABILITY_THRESHOLD:
+                        breath_rate = None
+                    else:
+                        self.last_breath_rate = breath_rate
+                else:
+                    self.last_breath_rate = breath_rate
+                self.breath_rate_history.append(breath_rate)
+                if len(self.breath_rate_history) > self.HISTORY_SIZE:
+                    self.breath_rate_history.pop(0)
+            return heart_rate, breath_rate
+        except Exception as e:
+            logger.error(f"Erro ao calcular sinais vitais: {str(e)}")
+            logger.error(traceback.format_exc())
+            return None, None
 
-# Instância global do amostrador adaptativo
-adaptive_sampler = AdaptiveSampler()
-
-class ZoneManager:
-    def __init__(self):
-        # Constantes para análise comportamental
-        self.HESITATION_SPEED_THRESHOLD = 5.0  # cm/s
-        self.HESITATION_TIME_THRESHOLD = 3.0   # segundos
-        self.INTERACTION_TIME_THRESHOLD = 5.0   # segundos
-        self.CONSIDERATION_TIME_THRESHOLD = 10.0 # segundos
-        
-    def get_zone_at_position(self, x, y):
-        """Identifica a zona baseado nas coordenadas (x, y)"""
+    def _calculate_rate_from_phase(self, phase_data, min_freq, max_freq, rate_multiplier):
         try:
-            # Buscar áreas ativas que contenham o ponto (x, y)
-            query = """
-                SELECT * FROM areas
-                WHERE is_active = TRUE
-                AND x_start <= %s AND x_end >= %s
-                AND y_start <= %s AND y_end >= %s
-                ORDER BY ABS(x_start - %s) + ABS(y_start - %s)
-                LIMIT 1
-            """
+            if not phase_data:
+                return None
+            phase_mean = np.mean(phase_data)
+            centered_phase = np.array(phase_data) - phase_mean
+            window = np.hanning(len(centered_phase))
+            windowed_phase = centered_phase * window
+            fft_result = np.fft.fft(windowed_phase)
+            fft_freq = np.fft.fftfreq(len(windowed_phase), d=1/self.SAMPLE_RATE)
+            valid_idx = np.where((fft_freq >= min_freq) & (fft_freq <= max_freq))[0]
+            if len(valid_idx) == 0:
+                return None
+            magnitude_spectrum = np.abs(fft_result[valid_idx])
+            peak_idx = np.argmax(magnitude_spectrum)
+            dominant_freq = fft_freq[valid_idx[peak_idx]]
+            peak_magnitude = magnitude_spectrum[peak_idx]
+            avg_magnitude = np.mean(magnitude_spectrum)
+            if peak_magnitude < 1.5 * avg_magnitude:
+                return None
+            rate = abs(dominant_freq * rate_multiplier)
+            return round(rate, 1)
+        except Exception as e:
+            logger.error(f"Erro ao calcular taxa a partir da fase: {str(e)}")
+            return None
+
+class EmotionalStateAnalyzer:
+    """
+    Analisador de estados emocionais baseado em HRV (Heart Rate Variability)
+    Baseado no estudo: "Heart Rate Variability is associated with emotion recognition" (Quintana et al., 2012)
+    """
+    def __init__(self):
+        # Parâmetros baseados no estudo científico
+        self.HRV_WINDOW_SIZE = 30  # 30 segundos para cálculo de HRV
+        self.BREATH_WINDOW_SIZE = 20  # 20 segundos para análise respiratória
+        self.EMOTION_UPDATE_INTERVAL = 5  # Atualização a cada 5 segundos
+        
+        # Buffers para armazenar histórico
+        self.heart_rate_buffer = []
+        self.breath_rate_buffer = []
+        self.timestamp_buffer = []
+        
+        # Limites baseados no estudo
+        self.POSITIVE_HRV_THRESHOLD = 0.15  # 15% de variação = positivo
+        self.NEGATIVE_HRV_THRESHOLD = 0.05   # 5% de variação = negativo
+        self.OPTIMAL_BREATH_RATE = (8, 14)   # Respiração profunda e ritmada
+        self.STRESS_BREATH_RATE = (18, 25)   # Respiração curta e rápida
+        self.BASELINE_HEART_RATE = 75         # BPM de referência
+        
+        # Estados emocionais
+        self.current_emotional_state = "NEUTRO"
+        self.emotional_confidence = 0.0
+        self.last_emotion_update = time.time()
+        
+        # Métricas calculadas
+        self.current_hrv = 0.0
+        self.breath_regularity = 0.0
+        self.heart_rate_trend = 0.0
+        
+    def calculate_hrv(self, heart_rates, timestamps):
+        """
+        Calcula a Heart Rate Variability (HRV) baseada na variação dos batimentos
+        """
+        if len(heart_rates) < 3:
+            return 0.0
             
-            params = (x, x, y, y, x, y)
+        try:
+            # Calcula a variação percentual dos batimentos
+            heart_rate_array = np.array(heart_rates)
+            mean_hr = np.mean(heart_rate_array)
             
-            db_manager.cursor.execute(query, params)
-            area = db_manager.cursor.fetchone()
-            
-            if area:
-                # Calcular distância do ponto ao centro da área
-                center_x = (area['x_start'] + area['x_end']) / 2
-                center_y = (area['y_start'] + area['y_end']) / 2
-                distance = ((x - center_x) ** 2 + (y - center_y) ** 2) ** 0.5
+            if mean_hr == 0:
+                return 0.0
                 
-                return {
-                    'area_id': area['id'],
-                    'area_name': area['area_name'],
-                    'description': area['description'],
-                    'distance': distance
-                }
+            # Calcula o coeficiente de variação (CV = std/mean)
+            hrv_cv = np.std(heart_rate_array) / mean_hr
             
-            return {
-                'area_name': 'FORA_ALCANCE',
-                'description': 'Área fora do alcance de monitoramento',
-                'distance': abs(y)
-            }
+            # Normaliza para uma escala de 0-1
+            hrv_normalized = min(hrv_cv, 0.3) / 0.3  # Máximo 30% de variação
+            
+            return hrv_normalized
             
         except Exception as e:
-            logger.error(f"❌ Erro ao buscar área: {str(e)}")
-            logger.error(traceback.format_exc())
-            return {
-                'area_name': 'ERRO',
-                'description': 'Erro ao identificar área',
-                'distance': 0
-            }
-        
-    def analyze_behavior(self, x, y, move_speed, timestamp, area_id):
-        """Analisa o comportamento do cliente na área"""
-        try:
-            # Determinar profundidade de interação baseado na velocidade
-            if move_speed <= self.HESITATION_SPEED_THRESHOLD:
-                interaction_depth = 'INTERACAO'
-            elif move_speed <= self.HESITATION_SPEED_THRESHOLD * 2:
-                interaction_depth = 'CONSIDERACAO'
-            elif move_speed <= self.HESITATION_SPEED_THRESHOLD * 3:
-                interaction_depth = 'ATENCAO'
-            else:
-                interaction_depth = 'PASSAGEM'
-            
-            # Determinar padrão de comportamento baseado na velocidade
-            if move_speed <= self.HESITATION_SPEED_THRESHOLD:
-                behavior_pattern = 'INTERESSE_ALTO'
-            elif move_speed <= self.HESITATION_SPEED_THRESHOLD * 2:
-                behavior_pattern = 'INTERESSE_MEDIO'
-            elif move_speed <= self.HESITATION_SPEED_THRESHOLD * 3:
-                behavior_pattern = 'INTERESSE_BAIXO'
-            else:
-                behavior_pattern = 'PASSAGEM_RAPIDA'
-            
-            return {
-                'area_id': area_id,
-                'interaction_depth': interaction_depth,
-                'behavior_pattern': behavior_pattern,
-                'move_speed': move_speed,
-                'timestamp': timestamp
-            }
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao analisar comportamento: {str(e)}")
-            logger.error(traceback.format_exc())
-            return None
-
-class AreaManager:
-    """Gerenciador de áreas de engajamento do cliente"""
+            logger.error(f"Erro ao calcular HRV: {str(e)}")
+            return 0.0
     
-    def __init__(self):
-        self.areas = {
-            'PASSAGEM': {
-                'y_min': 0.5,  # Mais afastado
-                'y_max': float('inf'),
-                'speed_threshold': 0.5,  # Velocidade mais alta
-                'description': 'Cliente apenas passando'
-            },
-            'ATENCAO': {
-                'y_min': 0.3,
-                'y_max': 0.5,
-                'speed_threshold': 0.3,  # Velocidade moderada
-                'description': 'Cliente olhando de longe'
-            },
-            'CONSIDERACAO': {
-                'y_min': 0.15,
-                'y_max': 0.3,
-                'speed_threshold': 0.2,  # Velocidade mais baixa
-                'description': 'Cliente analisando produtos'
-            },
-            'INTERACAO': {
-                'y_min': 0.0,
-                'y_max': 0.15,  # Mais próximo
-                'speed_threshold': 0.1,  # Velocidade muito baixa
-                'description': 'Cliente próximo, possivelmente pegando produto'
-            }
+    def calculate_breath_regularity(self, breath_rates):
+        """
+        Calcula a regularidade da respiração baseada na consistência dos valores
+        """
+        if len(breath_rates) < 3:
+            return 0.0
+            
+        try:
+            breath_array = np.array(breath_rates)
+            
+            # Calcula a consistência (inverso da variância)
+            breath_std = np.std(breath_array)
+            breath_mean = np.mean(breath_array)
+            
+            if breath_mean == 0:
+                return 0.0
+                
+            # Regularidade = 1 - (CV normalizado)
+            cv = breath_std / breath_mean
+            regularity = max(0, 1 - (cv / 0.5))  # Máximo 50% de variação
+            
+            return regularity
+            
+        except Exception as e:
+            logger.error(f"Erro ao calcular regularidade respiratória: {str(e)}")
+            return 0.0
+    
+    def calculate_heart_rate_trend(self, heart_rates, timestamps):
+        """
+        Calcula a tendência dos batimentos cardíacos (aumento/diminuição)
+        """
+        if len(heart_rates) < 2:
+            return 0.0
+            
+        try:
+            # Calcula a tendência linear
+            heart_array = np.array(heart_rates)
+            time_array = np.array(timestamps)
+            
+            # Normaliza o tempo para segundos
+            time_normalized = time_array - time_array[0]
+            
+            # Ajuste linear
+            coeffs = np.polyfit(time_normalized, heart_array, 1)
+            slope = coeffs[0]
+            
+            # Normaliza a tendência
+            trend_normalized = np.tanh(slope / 10)  # Usa tanh para limitar entre -1 e 1
+            
+            return trend_normalized
+            
+        except Exception as e:
+            logger.error(f"Erro ao calcular tendência cardíaca: {str(e)}")
+            return 0.0
+    
+    def classify_emotional_state(self, hrv, breath_regularity, heart_trend, current_hr, current_br):
+        """
+        Classifica o estado emocional baseado nos parâmetros fisiológicos
+        """
+        try:
+            # Pontuação baseada no estudo científico
+            score = 0.0
+            confidence = 0.0
+            
+            # 1. Análise da HRV (40% do peso)
+            if hrv > self.POSITIVE_HRV_THRESHOLD:
+                score += 0.4  # Alta HRV = positivo
+                confidence += 0.3
+            elif hrv < self.NEGATIVE_HRV_THRESHOLD:
+                score -= 0.4  # Baixa HRV = negativo
+                confidence += 0.3
+            else:
+                score += 0.0  # HRV neutra
+                confidence += 0.1
+            
+            # 2. Análise da respiração (30% do peso)
+            if self.OPTIMAL_BREATH_RATE[0] <= current_br <= self.OPTIMAL_BREATH_RATE[1]:
+                score += 0.3  # Respiração profunda e ritmada = positivo
+                confidence += 0.3
+            elif self.STRESS_BREATH_RATE[0] <= current_br <= self.STRESS_BREATH_RATE[1]:
+                score -= 0.3  # Respiração rápida = negativo
+                confidence += 0.3
+            else:
+                score += 0.0  # Respiração neutra
+                confidence += 0.1
+            
+            # 3. Análise da regularidade respiratória (20% do peso)
+            if breath_regularity > 0.7:
+                score += 0.2  # Respiração regular = positivo
+                confidence += 0.2
+            elif breath_regularity < 0.3:
+                score -= 0.2  # Respiração irregular = negativo
+                confidence += 0.2
+            else:
+                score += 0.0  # Regularidade neutra
+                confidence += 0.1
+            
+            # 4. Análise da tendência cardíaca (10% do peso)
+            if heart_trend < -0.1:  # Diminuição suave = positivo
+                score += 0.1
+                confidence += 0.1
+            elif heart_trend > 0.1:  # Aumento = negativo
+                score -= 0.1
+                confidence += 0.1
+            else:
+                score += 0.0  # Tendência neutra
+                confidence += 0.05
+            
+            # Classificação final
+            if score >= 0.3:
+                emotional_state = "POSITIVO"
+            elif score <= -0.3:
+                emotional_state = "NEGATIVO"
+            else:
+                emotional_state = "NEUTRO"
+            
+            # Normaliza a confiança
+            confidence = min(confidence, 1.0)
+            
+            return emotional_state, score, confidence
+            
+        except Exception as e:
+            logger.error(f"Erro ao classificar estado emocional: {str(e)}")
+            return "NEUTRO", 0.0, 0.0
+    
+    def update_emotional_state(self, heart_rate, breath_rate):
+        """
+        Atualiza o estado emocional com novos dados fisiológicos
+        """
+        current_time = time.time()
+        
+        # Adiciona novos dados aos buffers
+        self.heart_rate_buffer.append(heart_rate)
+        self.breath_rate_buffer.append(breath_rate)
+        self.timestamp_buffer.append(current_time)
+        
+        # Mantém apenas os dados mais recentes
+        while len(self.heart_rate_buffer) > self.HRV_WINDOW_SIZE:
+            self.heart_rate_buffer.pop(0)
+            self.timestamp_buffer.pop(0)
+        
+        while len(self.breath_rate_buffer) > self.BREATH_WINDOW_SIZE:
+            self.breath_rate_buffer.pop(0)
+        
+        # Atualiza a cada 5 segundos
+        if current_time - self.last_emotion_update >= self.EMOTION_UPDATE_INTERVAL:
+            if len(self.heart_rate_buffer) >= 3 and len(self.breath_rate_buffer) >= 3:
+                # Calcula métricas
+                self.current_hrv = self.calculate_hrv(self.heart_rate_buffer, self.timestamp_buffer)
+                self.breath_regularity = self.calculate_breath_regularity(self.breath_rate_buffer)
+                self.heart_rate_trend = self.calculate_heart_rate_trend(self.heart_rate_buffer, self.timestamp_buffer)
+                
+                # Classifica estado emocional
+                emotional_state, score, confidence = self.classify_emotional_state(
+                    self.current_hrv,
+                    self.breath_regularity,
+                    self.heart_rate_trend,
+                    heart_rate,
+                    breath_rate
+                )
+                
+                self.current_emotional_state = emotional_state
+                self.emotional_confidence = confidence
+                self.last_emotion_update = current_time
+                
+                return emotional_state, score, confidence
+        
+        return self.current_emotional_state, 0.0, self.emotional_confidence
+    
+    def get_emotional_insights(self):
+        """
+        Retorna insights sobre o estado emocional atual
+        """
+        insights = {
+            'state': self.current_emotional_state,
+            'confidence': self.emotional_confidence,
+            'hrv': self.current_hrv,
+            'breath_regularity': self.breath_regularity,
+            'heart_trend': self.heart_rate_trend,
+            'data_points': len(self.heart_rate_buffer)
         }
         
-    def get_area_at_position(self, x: float, y: float, speed: float) -> dict:
-        """Identifica a área baseada na posição Y e velocidade"""
-        for area_name, area in self.areas.items():
-            if area['y_min'] <= y < area['y_max'] and speed >= area['speed_threshold']:
-                return {
-                    'area_name': area_name,
-                    'description': area['description'],
-                    'y_distance': y,
-                    'speed': speed
-                }
-        return None
+        return insights
+
+class SerialRadarManager:
+    def __init__(self, port=None, baudrate=115200):
+        self.port = port or SERIAL_CONFIG['port']
+        self.baudrate = baudrate or SERIAL_CONFIG['baudrate']
+        self.serial_connection = None
+        self.is_running = False
+        self.receive_thread = None
+        self.db_manager = None
+        self.analytics_manager = AnalyticsManager()
+        self.vital_signs_manager = VitalSignsManager()
+        self.emotional_analyzer = EmotionalStateAnalyzer()  # Novo analisador emocional
+        self.current_session_id = None
+        self.last_activity_time = None
+        self.SESSION_TIMEOUT = 60  # 1 minuto para identificar novas pessoas
+        self.last_valid_data_time = time.time()  # Timestamp do último dado válido
+        self.RESET_TIMEOUT = 60  # 1 minuto
+        # Buffer para engajamento
+        self.engagement_buffer = []
+        self.ENGAGEMENT_WINDOW = 1
+        self.ENGAGEMENT_DISTANCE = 1.0
+        self.ENGAGEMENT_SPEED = 10.0
+        self.ENGAGEMENT_MIN_COUNT = 1
+        # Parâmetros para detecção de pessoas
+        self.last_position = None
+        self.POSITION_THRESHOLD = 0.5
+        self.MOVEMENT_THRESHOLD = 20.0
+        self.session_positions = []
         
-    def analyze_behavior(self, x: float, y: float, speed: float, timestamp: datetime, current_area: str) -> dict:
-        """Analisa o comportamento do cliente na área atual"""
-        if not current_area:
+        # Contadores para debug
+        self.messages_received = 0
+        self.messages_processed = 0
+        self.messages_failed = 0
+
+    def _generate_session_id(self):
+        """Gera um novo ID de sessão"""
+        return str(uuid.uuid4())
+
+    def _check_session_timeout(self):
+        """Verifica se a sessão atual expirou"""
+        if self.last_activity_time and (time.time() - self.last_activity_time) > self.SESSION_TIMEOUT:
+            logger.debug("Sessão expirada, gerando nova sessão")
+            self.current_session_id = self._generate_session_id()
+            self.last_activity_time = time.time()
+            self.session_positions = []  # Limpa histórico de posições
+            return True
+        return False
+
+    def _is_new_person(self, x, y, move_speed):
+        """Verifica se os dados indicam uma nova pessoa"""
+        if not self.last_position:
+            return True
+
+        last_x, last_y = self.last_position
+        distance = math.sqrt((x - last_x)**2 + (y - last_y)**2)
+        
+        # Se a distância for muito grande ou a velocidade for muito alta, provavelmente é uma nova pessoa
+        if distance > self.POSITION_THRESHOLD or move_speed > self.MOVEMENT_THRESHOLD:
+            return True
+            
+        # Verifica se o movimento é consistente com a última posição
+        if len(self.session_positions) >= 2:
+            last_positions = self.session_positions[-2:]
+            avg_speed = sum(p['speed'] for p in last_positions) / len(last_positions)
+            if abs(move_speed - avg_speed) > self.MOVEMENT_THRESHOLD:
+                return True
+                
+        return False
+
+    def _update_session(self):
+        """Atualiza ou cria uma nova sessão"""
+        current_time = time.time()
+        
+        # Verifica timeout da sessão
+        if not self.current_session_id or self._check_session_timeout():
+            self.current_session_id = self._generate_session_id()
+            self.last_activity_time = current_time
+            self.session_positions = []  # Limpa histórico de posições
+            logger.debug(f"Nova sessão iniciada: {self.current_session_id}")
+        else:
+            self.last_activity_time = current_time
+
+    def find_serial_port(self):
+        import serial.tools.list_ports
+        ports = list(serial.tools.list_ports.comports())
+        if not ports:
+            logger.error("Nenhuma porta serial encontrada!")
             return None
+        for port in ports:
+            desc_lower = port.description.lower()
+            if any(term in desc_lower for term in
+                  ['usb', 'serial', 'uart', 'cp210', 'ch340', 'ft232', 'arduino', 'esp32']):
+                logger.info(f"Porta serial encontrada: {port.device} ({port.description})")
+                return port.device
+        logger.info(f"Usando primeira porta serial disponível: {ports[0].device}")
+        return ports[0].device
+
+    def connect(self):
+        # Se a porta não existir mais, tenta detectar automaticamente
+        if not self.port or not os.path.exists(self.port):
+            logger.warning(f"⚠️ Porta serial {self.port} não encontrada. Tentando detectar automaticamente...")
             
-        # Identificar padrão de comportamento
-        if speed < 0.1:
-            behavior_pattern = 'PARADO'
-        elif speed < 0.3:
-            behavior_pattern = 'ANALISANDO'
-        else:
-            behavior_pattern = 'PASSANDO'
+            detected_port = self.find_serial_port()
+            if detected_port:
+                self.port = detected_port
+                logger.info(f"✅ Porta serial detectada automaticamente: {self.port}")
+            else:
+                logger.error("❌ Nenhuma porta serial disponível para conexão!")
+                return False
+        
+        try:
+            logger.info(f"🔄 Conectando à porta serial {self.port} (baudrate: {self.baudrate})...")
             
-        # Determinar profundidade de interação
-        if y <= 0.15:
-            interaction_depth = 'INTERACAO'
-        elif y <= 0.3:
-            interaction_depth = 'CONSIDERACAO'
-        elif y <= 0.5:
-            interaction_depth = 'ATENCAO'
-        else:
-            interaction_depth = 'PASSAGEM'
+            self.serial_connection = serial.Serial(
+                port=self.port,
+                baudrate=self.baudrate,
+                timeout=1,
+                write_timeout=1,
+                bytesize=serial.EIGHTBITS,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE
+            )
             
-        return {
-            'area_name': current_area,
-            'behavior_pattern': behavior_pattern,
-            'interaction_depth': interaction_depth,
-            'y_distance': y,
-            'speed': speed,
-            'timestamp': timestamp
+            time.sleep(2)
+            
+            logger.info(f"✅ Conexão serial estabelecida com sucesso!")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Erro ao conectar à porta serial: {str(e)}")
+            logger.error(traceback.format_exc())
+            return False
+
+    def start(self, db_manager):
+        self.db_manager = db_manager
+        
+        if not self.connect():
+            logger.error(f"🔍 [START] Falha na conexão serial")
+            return False
+        
+        self.is_running = True
+        self.receive_thread = threading.Thread(target=self.receive_data_loop)
+        self.receive_thread.daemon = True
+        self.receive_thread.start()
+        
+        logger.info("✅ Receptor de dados seriais iniciado!")
+        return True
+
+    def stop(self):
+        self.is_running = False
+        if self.serial_connection:
+            try:
+                self.serial_connection.close()
+            except:
+                pass
+        if self.receive_thread and self.receive_thread.is_alive():
+            self.receive_thread.join(timeout=2)
+        logger.info("Receptor de dados seriais parado!")
+
+    def hardware_reset_esp32(self):
+        """
+        Reinicia a ESP32 via pulso nas linhas DTR/RTS da porta serial.
+        Não interfere na conexão principal do radar.
+        """
+        try:
+            logger.warning("[ESP32 RESET] Iniciando reset via DTR/RTS na porta serial...")
+            # Fecha a conexão principal se estiver aberta
+            was_open = False
+            if self.serial_connection and self.serial_connection.is_open:
+                self.serial_connection.close()
+                was_open = True
+            # Abre uma conexão temporária só para reset
+            with serial.Serial(self.port, self.baudrate, timeout=1) as ser:
+                ser.setDTR(False)
+                ser.setRTS(True)
+                time.sleep(0.1)
+                ser.setDTR(True)
+                ser.setRTS(False)
+                time.sleep(0.1)
+            logger.info("[ESP32 RESET] Pulso de reset enviado com sucesso!")
+            # Reabre a conexão principal se estava aberta
+            if was_open:
+                self.connect()
+            return True
+        except Exception as e:
+            logger.error(f"[ESP32 RESET] Falha ao resetar ESP32: {e}")
+            logger.error(traceback.format_exc())
+            return False
+
+    def receive_data_loop(self):
+        buffer = ""
+        message_mode = False
+        message_buffer = ""
+        target_data_complete = False
+        last_data_time = time.time()
+        if not hasattr(self, 'last_valid_data_time'):
+            self.last_valid_data_time = time.time()
+        self.RESET_TIMEOUT = 60  # 1 minuto
+        
+        logger.info("\n🔄 Iniciando loop de recebimento de dados...")
+        logger.info(f"🔍 [SERIAL] Aguardando dados da ESP32...")
+        
+        # Contador para mostrar atividade
+        loop_count = 0
+        last_activity_log = time.time()
+        
+        while self.is_running:
+            try:
+                loop_count += 1
+                
+                if not self.serial_connection.is_open:
+                    logger.warning("⚠️ Conexão serial fechada, tentando reconectar...")
+                    self.connect()
+                    time.sleep(1)
+                    continue
+                
+                in_waiting = self.serial_connection.in_waiting
+                if in_waiting is None:
+                    in_waiting = 0
+                
+                data = self.serial_connection.read(in_waiting or 1)
+                if data:
+                    last_data_time = time.time()
+                    text = data.decode('utf-8', errors='ignore')
+                    
+                    buffer += text
+                    
+                    if '\n' in buffer:
+                        lines = buffer.split('\n')
+                        buffer = lines[-1]
+                        
+                        for line in lines[:-1]:
+                            line = line.strip()
+                            
+                            if '-----Human Detected-----' in line:
+                                if not message_mode:
+                                    logger.info(f"🎯 [SERIAL] DETECÇÃO DE PESSOA ENCONTRADA!")
+                                    message_mode = True
+                                    message_buffer = line + '\n'
+                                    target_data_complete = False
+                                    self.messages_received += 1
+                            elif message_mode:
+                                message_buffer += line + '\n'
+                                
+                                if 'move_speed:' in line:
+                                    logger.info(f"✅ [SERIAL] MENSAGEM COMPLETA - PROCESSANDO...")
+                                    
+                                    target_data_complete = True
+                                    self.process_radar_data(message_buffer)
+                                    self.last_valid_data_time = time.time()  # Atualiza SOMENTE ao processar mensagem completa
+                                    
+                                    message_mode = False
+                                    message_buffer = ""
+                                    target_data_complete = False
+                                    
+                                    # Mostra resumo periódico
+                                    if self.messages_received % 5 == 0:
+                                        logger.info(f"📊 [RESUMO] Mensagens recebidas: {self.messages_received}, Processadas: {self.messages_processed}, Falharam: {self.messages_failed}")
+                
+                current_time = time.time()
+                if current_time - self.last_valid_data_time > self.RESET_TIMEOUT:
+                    logger.warning("⚠️ Nenhum dado recebido por mais de 1 minuto. Executando reset automático da ESP32 via DTR/RTS...")
+                    self.hardware_reset_esp32()
+                    self.last_valid_data_time = current_time
+                    
+                if time.time() - last_data_time > 5:
+                    logger.warning("⚠️ Nenhum dado recebido nos últimos 5 segundos")
+                    last_data_time = time.time()
+                    
+                time.sleep(0.01)
+                
+            except Exception as e:
+                logger.error(f"❌ Erro no loop de recepção: {str(e)}")
+                logger.error(traceback.format_exc())
+                time.sleep(1)
+
+    def reset_radar(self):
+        """Executa um reset no radar"""
+        try:
+            logger.warning("🔄 [RESET] Iniciando reset do radar por inatividade de dados...")
+            # Desconecta o radar
+            if self.serial_connection and self.serial_connection.is_open:
+                logger.info("[RESET] Fechando conexão serial antes do reset...")
+                self.serial_connection.close()
+                time.sleep(1)  # Aguarda 1 segundo
+            else:
+                logger.info("[RESET] Conexão serial já estava fechada.")
+            # Reconecta o radar
+            logger.info(f"[RESET] Reabrindo conexão serial na porta {self.port}...")
+            self.serial_connection = serial.Serial(
+                port=self.port,
+                baudrate=self.baudrate,
+                timeout=1,
+                write_timeout=1,
+                bytesize=serial.EIGHTBITS,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE
+            )
+            logger.info("[RESET] Conexão serial reestabelecida.")
+            # Envia comando de reset (ajuste conforme necessário para seu radar)
+            logger.info("[RESET] Enviando comando de reset para o radar...")
+            self.serial_connection.write(b'RESET\n')
+            time.sleep(2)  # Aguarda 2 segundos para o reset completar
+            logger.info("✅ [RESET] Reset do radar concluído com sucesso!")
+            return True
+        except Exception as e:
+            logger.error(f"❌ [RESET] Erro ao resetar o radar: {str(e)}")
+            logger.error(traceback.format_exc())
+            return False
+
+    def _check_engagement(self, section_id, distance, move_speed):
+        # Adiciona leitura ao buffer
+        self.engagement_buffer.append({
+            'section_id': section_id,
+            'distance': distance,
+            'move_speed': move_speed,
+            'timestamp': time.time()
+        })
+        # Mantém o buffer no tamanho da janela
+        if len(self.engagement_buffer) > self.ENGAGEMENT_WINDOW:
+            self.engagement_buffer.pop(0)
+        # Filtra leituras válidas
+        valid = [e for e in self.engagement_buffer if e['section_id'] == section_id and e['distance'] <= self.ENGAGEMENT_DISTANCE and e['move_speed'] <= self.ENGAGEMENT_SPEED]
+        # Engajamento se houver pelo menos ENGAGEMENT_MIN_COUNT leituras consecutivas válidas
+        if len(valid) >= self.ENGAGEMENT_MIN_COUNT:
+            return True
+        return False
+
+    def process_radar_data(self, raw_data):
+        data = parse_serial_data(raw_data)
+        if not data:
+            logger.warning(f"❌ [PROCESS] Mensagem falhou no parse! Total de falhas: {self.messages_failed}")
+            self.messages_failed += 1
+            return
+
+        self.messages_processed += 1
+        logger.info(f"✅ [PROCESS] Mensagem processada com sucesso! Total processadas: {self.messages_processed}")
+
+        # Extrair dados relevantes
+        x = data.get('x_point', 0)
+        y = data.get('y_point', 0)
+        move_speed = abs(data.get('dop_index', 0) * RANGE_STEP)
+        
+        # Verifica se é uma nova pessoa
+        if self._is_new_person(x, y, move_speed):
+            self.current_session_id = self._generate_session_id()
+            self.last_activity_time = time.time()
+            self.session_positions = []
+        
+        # Atualiza posição atual
+        self.last_position = (x, y)
+        self.session_positions.append({
+            'x': x,
+            'y': y,
+            'speed': move_speed,
+            'timestamp': time.time()
+        })
+        
+        # Mantém apenas as últimas 10 posições
+        if len(self.session_positions) > 10:
+            self.session_positions.pop(0)
+
+        # Atualiza a sessão
+        self._update_session()
+
+        # Usar os valores de batimentos e respiração diretamente do radar se disponíveis
+        heart_rate = data.get('heart_rate')
+        breath_rate = data.get('breath_rate')
+        
+        # Se não houver valores diretos, calcular usando as fases
+        if heart_rate is None or breath_rate is None:
+            heart_rate, breath_rate = self.vital_signs_manager.calculate_vital_signs(
+                data.get('total_phase', 0),
+                data.get('breath_phase', 0),
+                data.get('heart_phase', 0),
+                data.get('distance', 0)
+            )
+        
+        # Análise emocional baseada em HRV
+        emotional_state = "NEUTRO"
+        emotional_score = 0.0
+        emotional_confidence = 0.0
+        
+        if heart_rate is not None and breath_rate is not None:
+            emotional_state, emotional_score, emotional_confidence = self.emotional_analyzer.update_emotional_state(
+                heart_rate, breath_rate
+            )
+        
+        distance = data.get('distance', 0)
+        if distance == 0:
+            x = data.get('x_point', 0)
+            y = data.get('y_point', 0)
+            distance = (x**2 + y**2)**0.5
+        
+        dop_index = data.get('dop_index', 0)
+        move_speed = abs(dop_index * RANGE_STEP) if dop_index is not None else 0
+        
+        converted_data = {
+            'session_id': self.current_session_id,
+            'x_point': data.get('x_point', 0),
+            'y_point': data.get('y_point', 0),
+            'move_speed': move_speed,
+            'distance': distance,
+            'dop_index': dop_index,
+            'heart_rate': heart_rate,
+            'breath_rate': breath_rate,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            # Novos campos emocionais
+            'emotional_state': emotional_state,
+            'emotional_score': emotional_score,
+            'emotional_confidence': emotional_confidence,
+            'hrv_value': self.emotional_analyzer.current_hrv,
+            'breath_regularity': self.emotional_analyzer.breath_regularity,
+            'heart_trend': self.emotional_analyzer.heart_rate_trend
         }
-
-# Instância global do gerenciador de áreas
-area_manager = AreaManager()
-
-@app.route('/radar/data', methods=['POST'])
-def receive_radar_data():
-    """Endpoint para receber dados do radar"""
-    try:
-        # Obter dados do request
-        data = request.get_json()
-        current_time = datetime.now()
         
-        logger.info("==================================================")
-        logger.info("📡 Requisição POST recebida em /radar/data")
-        logger.info(f"Headers: {request.headers}")
-        logger.info(f"Dados recebidos: {data}")
-        
-        # Converter dados
-        converted_data = convert_radar_data(data)
-        if not converted_data:
-            return jsonify({
-                "status": "error",
-                "message": "Dados inválidos"
-            }), 400
-
-        # Verificar política de amostragem
-        should_sample, next_interval = adaptive_sampler.should_sample(
-            current_time, 
-            converted_data['move_speed']
-        )
-
-        if not should_sample:
-            logger.info(f"Amostra ignorada pela política de amostragem. Próximo intervalo: {next_interval}ms")
-            return jsonify({
-                "status": "success",
-                "message": "Amostra ignorada pela política de amostragem",
-                "next_sample_interval_ms": next_interval
-            })
-            
-        # Adicionar timestamp
-        converted_data['timestamp'] = current_time.strftime('%Y-%m-%d %H:%M:%S')
-
-        # Identificar área atual
-        distance = np.sqrt(converted_data['x_point']**2 + converted_data['y_point']**2)
-        area = {
-            'area_name': 'PASSAGEM',
-            'description': 'Cliente apenas passando',
-            'distance': distance
-        }
-        logger.info(f"🎯 Área atual: {area['area_name']} (distância: {area['distance']:.2f}m)")
-        
-        # Identificar seção baseado na posição
         section = shelf_manager.get_section_at_position(
             converted_data['x_point'],
             converted_data['y_point'],
-            db_manager
+            self.db_manager
         )
         
         if section:
             converted_data['section_id'] = section['section_id']
             converted_data['product_id'] = section['product_id']
-            logger.info(f"📍 Seção detectada: {section['section_name']} (Produto: {section['product_id']})")
         else:
             converted_data['section_id'] = None
             converted_data['product_id'] = None
-            
-        # Adicionar informação da área
-        converted_data['area'] = area['area_name']
         
-        # Obter últimos registros para calcular engajamento
-        last_records = db_manager.get_last_records(10)
+        # Lógica de engajamento
+        is_engaged = False
+        if section:
+            is_engaged = self._check_engagement(section['section_id'], distance, move_speed)
         
-        # Calcular engajamento
-        is_engaged, engagement_duration = analytics_manager.calculate_engagement(last_records)
         converted_data['is_engaged'] = is_engaged
-        converted_data['engagement_duration'] = engagement_duration
         
-        # Calcular satisfação
-        satisfaction_data = analytics_manager.calculate_satisfaction_score(
-            converted_data.get('move_speed'),
-            converted_data.get('heart_rate'),
-            converted_data.get('breath_rate')
+        satisfaction_score, satisfaction_class = self.analytics_manager.calculate_satisfaction_score(
+            move_speed, heart_rate, breath_rate, distance
         )
+        converted_data['satisfaction_score'] = satisfaction_score
+        converted_data['satisfaction_class'] = satisfaction_class
+
+        # Formatação da saída
+        output = [
+            "\n" + "="*50,
+            "📡 DADOS DO RADAR",
+            "="*50,
+            f"⏰ {converted_data['timestamp']}",
+            "-"*50
+        ]
         
-        converted_data['satisfaction_score'] = satisfaction_data[0]
-        converted_data['satisfaction_class'] = satisfaction_data[1]
+        if section:
+            output.extend([
+                f"📍 SEÇÃO: {section['section_name']}",
+                f"   Produto ID: {section['product_id']}"
+            ])
+        else:
+            output.extend([
+                "📍 SEÇÃO: Fora da área monitorada",
+                "   Produto ID: N/A"
+            ])
         
-        # Log dos dados calculados
-        logger.info(f"Dados de engajamento: engajado={is_engaged}, duração={engagement_duration}s")
-        logger.info(f"Dados de satisfação: score={satisfaction_data[0]}, class={satisfaction_data[1]}")
+        output.extend([
+            "-"*50,
+            "📊 POSIÇÃO:",
+            f"   X: {converted_data['x_point']:>6.2f} m",
+            f"   Y: {converted_data['y_point']:>6.2f} m",
+            f"   Distância: {converted_data['distance']:>6.2f} m",
+            f"   Velocidade: {converted_data['move_speed']:>6.2f} cm/s",
+            "-"*50,
+            "❤️ SINAIS VITAIS:"
+        ])
         
-        # Inserir dados no banco
-        success = db_manager.insert_radar_data(converted_data)
+        if heart_rate is not None and breath_rate is not None:
+            output.extend([
+                f"   Batimentos: {heart_rate:>6.1f} bpm",
+                f"   Respiração: {breath_rate:>6.1f} rpm"
+            ])
+        else:
+            output.append("   ⚠️ Aguardando detecção...")
+        
+        output.extend([
+            "-"*50,
+            "🧠 ANÁLISE EMOCIONAL:",
+            f"   Estado: {emotional_state}",
+            f"   Score: {emotional_score:>6.3f}",
+            f"   Confiança: {emotional_confidence:>6.3f}",
+            f"   HRV: {self.emotional_analyzer.current_hrv:>6.3f}",
+            f"   Regularidade Resp.: {self.emotional_analyzer.breath_regularity:>6.3f}",
+            f"   Tendência Cardíaca: {self.emotional_analyzer.heart_rate_trend:>6.3f}",
+            "-"*50,
+            "🎯 ANÁLISE:",
+            f"   Engajamento: {'✅ Sim' if is_engaged else '❌ Não'}",
+            f"   Score: {converted_data['satisfaction_score']:>6.1f}",
+            f"   Classificação: {converted_data['satisfaction_class']}",
+            "="*50 + "\n"
+        ])
+        
+        # Exibe a saída formatada
+        logger.info("\n".join(output))
+        
+        if self.db_manager:
+            try:
+                success = self.db_manager.insert_radar_data(converted_data)
+                
+                if success:
+                    logger.info(f"✅ [PROCESS] Dados enviados com sucesso para o Google Sheets!")
+                else:
+                    logger.error("❌ Falha ao enviar dados para o Google Sheets")
+                    
+            except Exception as e:
+                logger.error(f"❌ Erro ao enviar para o Google Sheets: {str(e)}")
+                logger.error(traceback.format_exc())
+        else:
+            logger.warning("⚠️ Gerenciador de planilha não disponível")
+
+def main():
+    logger.info("🚀 Iniciando sistema de radar serial...")
+    
+    try:
+        # Obtém o caminho absoluto do diretório onde o script está localizado
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Verifica se já estamos na pasta serial_radar ou se precisamos navegar até ela
+        if script_dir.endswith('serial_radar'):
+            # Já estamos na pasta serial_radar
+            credentials_file_path = os.path.join(script_dir, 'credenciais.json')
+        else:
+            # Precisamos navegar até a pasta serial_radar
+            credentials_file_path = os.path.join(script_dir, 'serial_radar', 'credenciais.json')
+        
+        gsheets_manager = GoogleSheetsManager(credentials_file_path, 'codigo_rasp')
+        logger.info("✅ GoogleSheetsManager iniciado com sucesso!")
+        
+        # Teste de conectividade do Google Sheets
+        try:
+            test_data = {
+                'session_id': 'test_session',
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'x_point': 0.0,
+                'y_point': 0.0,
+                'move_speed': 0.0,
+                'heart_rate': 0.0,
+                'breath_rate': 0.0,
+                'distance': 0.0,
+                'section_id': None,
+                'product_id': None,
+                'satisfaction_score': 0.0,
+                'satisfaction_class': 'TEST',
+                'is_engaged': False,
+                # Novos campos emocionais
+                'emotional_state': 'NEUTRO',
+                'emotional_score': 0.0,
+                'emotional_confidence': 0.0,
+                'hrv_value': 0.0,
+                'breath_regularity': 0.0,
+                'heart_trend': 0.0
+            }
+            
+            test_result = gsheets_manager.insert_radar_data(test_data)
+            
+            if test_result:
+                logger.info("✅ [MAIN] Teste do Google Sheets bem-sucedido!")
+            else:
+                logger.error("❌ [MAIN] Teste do Google Sheets falhou!")
+                
+        except Exception as e:
+            logger.error(f"❌ [MAIN] Erro no teste do Google Sheets: {str(e)}")
+            logger.error(traceback.format_exc())
+        
+        # Teste do parser com dados simulados
+        test_radar_data = """-----Human Detected-----
+Target 1:
+x_point: 0.50
+y_point: 1.20
+dop_index: 6
+move_speed: 15.20 cm/s
+distance: 1.30
+heart_rate: 75.0
+breath_rate: 15.0"""
+        
+        parsed_data = parse_serial_data(test_radar_data)
+        
+        if parsed_data:
+            logger.info("✅ [MAIN] Parser funcionando corretamente!")
+        else:
+            logger.error("❌ [MAIN] Parser falhou com dados simulados!")
+        
+        # Teste completo do processamento
+        radar_manager_test = SerialRadarManager('/dev/ttyACM0', 115200)
+        radar_manager_test.db_manager = gsheets_manager
+        
+        try:
+            radar_manager_test.process_radar_data(test_radar_data)
+            logger.info("✅ [MAIN] Processamento completo funcionando!")
+        except Exception as e:
+            logger.error(f"❌ [MAIN] Erro no processamento completo: {str(e)}")
+            logger.error(traceback.format_exc())
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao criar instância do GoogleSheetsManager: {e}")
+        logger.error(traceback.format_exc())
+        return
+    
+    # Definindo a porta serial diretamente
+    port = '/dev/ttyACM0'
+    baudrate = int(os.getenv("SERIAL_BAUDRATE", "115200"))
+    
+    radar_manager = SerialRadarManager(port, baudrate)
+    
+    try:
+        logger.info(f"🔄 Iniciando SerialRadarManager...")
+        
+        success = radar_manager.start(gsheets_manager)
         
         if not success:
-            logger.error("❌ Falha ao inserir dados no banco")
-            return jsonify({
-                "status": "error",
-                "message": "Falha ao inserir dados no banco"
-            }), 500
+            logger.error("❌ Falha ao iniciar o gerenciador de radar serial")
+            return
         
-        return jsonify({
-            "status": "success",
-            "message": "Dados processados com sucesso",
-            "data": converted_data,
-            "next_sample_interval_ms": next_interval
-        })
+        logger.info("="*50)
+        logger.info("🚀 Sistema Radar Serial iniciado com sucesso!")
+        logger.info(f"📡 Porta serial: {radar_manager.port}")
+        logger.info(f"📡 Baudrate: {radar_manager.baudrate}")
+        logger.info("⚡ Pressione Ctrl+C para encerrar")
+        logger.info("="*50)
         
-    except Exception as e:
-        logger.error(f"❌ Erro ao processar dados: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "status": "error",
-            "message": f"Erro ao processar dados: {str(e)}"
-        }), 500
-
-@app.route('/radar/status', methods=['GET'])
-def get_status():
-    """Endpoint para verificar status"""
-    try:
-        status = {
-            "server": "online",
-            "database": "offline",
-            "last_records": None,
-            "connection_info": {}
-        }
-
-        try:
-            # Verificar conexão
-            if db_manager and db_manager.conn:
-                is_connected = db_manager.conn.is_connected()
-                status["connection_info"]["is_connected"] = is_connected
-                
-                if is_connected:
-                    status["database"] = "online"
-                    status["last_records"] = db_manager.get_last_records(5)
-                    
-                    # Obter informações do servidor
-                    try:
-                        cursor = db_manager.conn.cursor(dictionary=True)
-                        cursor.execute("SELECT VERSION() as version")
-                        version = cursor.fetchone()
-                        cursor.close()
-                        
-                        if version:
-                            status["connection_info"]["version"] = version["version"]
-                    except Exception as e:
-                        status["connection_info"]["version_error"] = str(e)
-                else:
-                    status["connection_info"]["connection_error"] = "Connection object exists but is not connected"
-            else:
-                status["connection_info"]["error"] = "Database manager or connection object is None"
-        except Exception as e:
-            status["connection_info"]["exception"] = str(e)
-
-        return jsonify(status)
-    except Exception as e:
-        logger.error(f"Erro ao verificar status: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "status": "error",
-            "message": str(e),
-            "traceback": traceback.format_exc()
-        }), 500
-
-@app.route('/radar/sessions', methods=['GET'])
-def get_sessions():
-    """Endpoint para listar sessões"""
-    try:
-        if not db_manager:
-            return jsonify({
-                "status": "error",
-                "message": "Banco de dados não disponível"
-            }), 500
+        # Contador para mostrar status periódico
+        loop_count = 0
+        
+        while True:
+            time.sleep(1)
+            loop_count += 1
             
-        # Obter limite da query string
-        limit = request.args.get('limit', default=10, type=int)
-        
-        # Obter sessões
-        sessions = db_manager.get_sessions(limit)
-        
-        return jsonify({
-            "status": "success",
-            "count": len(sessions),
-            "sessions": sessions
-        })
-    except Exception as e:
-        logger.error(f"Erro ao listar sessões: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "status": "error",
-            "message": f"Erro interno: {str(e)}"
-        }), 500
-
-@app.route('/radar/sessions/<session_id>', methods=['GET'])
-def get_session(session_id):
-    """Endpoint para obter detalhes de uma sessão"""
-    try:
-        if not db_manager:
-            return jsonify({
-                "status": "error",
-                "message": "Banco de dados não disponível"
-            }), 500
+            # Mostra status a cada 30 segundos
+            if loop_count % 30 == 0:
+                logger.info(f"📊 [STATUS] Sistema rodando há {loop_count} segundos")
+                logger.info(f"📊 [STATUS] Mensagens: Recebidas={radar_manager.messages_received}, Processadas={radar_manager.messages_processed}, Falharam={radar_manager.messages_failed}")
+                logger.info(f"📊 [STATUS] Conexão serial: {'✅ Ativa' if radar_manager.serial_connection and radar_manager.serial_connection.is_open else '❌ Inativa'}")
+                logger.info(f"📊 [STATUS] Thread de recepção: {'✅ Ativa' if radar_manager.receive_thread and radar_manager.receive_thread.is_alive() else '❌ Inativa'}")
             
-        # Obter sessão
-        session = db_manager.get_session_by_id(session_id)
+    except KeyboardInterrupt:
+        logger.info("🔄 Encerrando por interrupção do usuário...")
         
-        if not session:
-            return jsonify({
-                "status": "error",
-                "message": f"Sessão {session_id} não encontrada"
-            }), 404
-        
-        return jsonify({
-            "status": "success",
-            "session": session
-        })
-    except Exception as e:
-        logger.error(f"Erro ao obter sessão {session_id}: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "status": "error",
-            "message": f"Erro interno: {str(e)}"
-        }), 500
-
-@app.route('/shelf/sections', methods=['GET'])
-def get_sections():
-    """Endpoint para listar todas as seções"""
-    try:
-        if not db_manager:
-            return jsonify({
-                "status": "error",
-                "message": "Banco de dados não disponível"
-            }), 500
-            
-        sections = shelf_manager.get_all_sections(db_manager)
-        
-        return jsonify({
-            "status": "success",
-            "count": len(sections),
-            "sections": sections
-        })
-    except Exception as e:
-        logger.error(f"Erro ao listar seções: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "status": "error",
-            "message": f"Erro interno: {str(e)}"
-        }), 500
-
-@app.route('/shelf/sections', methods=['POST'])
-def add_section():
-    """Endpoint para adicionar uma nova seção"""
-    try:
-        if not request.is_json:
-            return jsonify({
-                "status": "error",
-                "message": "Content-Type deve ser application/json"
-            }), 400
-            
-        section_data = request.get_json()
-        
-        # Validar dados obrigatórios
-        required_fields = ['section_name', 'x_start', 'y_start', 'x_end', 'y_end', 'product_id', 'product_name']
-        for field in required_fields:
-            if field not in section_data:
-                return jsonify({
-                    "status": "error",
-                    "message": f"Campo obrigatório não fornecido: {field}"
-                }), 400
-        
-        if not db_manager:
-            return jsonify({
-                "status": "error",
-                "message": "Banco de dados não disponível"
-            }), 500
-            
-        success = shelf_manager.add_section(section_data, db_manager)
-        
-        if success:
-            return jsonify({
-                "status": "success",
-                "message": "Seção adicionada com sucesso"
-            })
-        else:
-            return jsonify({
-                "status": "error",
-                "message": "Erro ao adicionar seção"
-            }), 500
-            
-    except Exception as e:
-        logger.error(f"Erro ao adicionar seção: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "status": "error",
-            "message": f"Erro interno: {str(e)}"
-        }), 500
-
-@app.route('/shelf/sections/<int:section_id>', methods=['PUT'])
-def update_section(section_id):
-    """Endpoint para atualizar uma seção existente"""
-    try:
-        if not request.is_json:
-            return jsonify({
-                "status": "error",
-                "message": "Content-Type deve ser application/json"
-            }), 400
-            
-        section_data = request.get_json()
-        
-        if not db_manager:
-            return jsonify({
-                "status": "error",
-                "message": "Banco de dados não disponível"
-            }), 500
-            
-        success = shelf_manager.update_section(section_id, section_data, db_manager)
-        
-        if success:
-            return jsonify({
-                "status": "success",
-                "message": "Seção atualizada com sucesso"
-            })
-        else:
-            return jsonify({
-                "status": "error",
-                "message": "Erro ao atualizar seção"
-            }), 500
-            
-    except Exception as e:
-        logger.error(f"Erro ao atualizar seção: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "status": "error",
-            "message": f"Erro interno: {str(e)}"
-        }), 500
-
-@app.route('/radar/sampling/config', methods=['GET'])
-def get_sampling_config():
-    """Retorna a configuração atual do amostrador adaptativo"""
-    try:
-        config = {
-            "high_activity_threshold": adaptive_sampler.HIGH_ACTIVITY_THRESHOLD,
-            "low_activity_threshold": adaptive_sampler.LOW_ACTIVITY_THRESHOLD,
-            "high_activity_interval_ms": adaptive_sampler.HIGH_ACTIVITY_INTERVAL,
-            "medium_activity_interval_ms": adaptive_sampler.MEDIUM_ACTIVITY_INTERVAL,
-            "low_activity_interval_ms": adaptive_sampler.LOW_ACTIVITY_INTERVAL,
-            "idle_interval_ms": adaptive_sampler.IDLE_INTERVAL,
-            "max_idle_count": adaptive_sampler.max_idle_count,
-            "current_sampling_interval_ms": adaptive_sampler.current_sampling_interval,
-            "consecutive_idle_count": adaptive_sampler.consecutive_idle_count
-        }
-        
-        return jsonify({
-            "status": "success",
-            "config": config
-        })
-    except Exception as e:
-        logger.error(f"Erro ao obter configuração de amostragem: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "status": "error",
-            "message": f"Erro interno: {str(e)}"
-        }), 500
-
-@app.route('/radar/sampling/config', methods=['POST'])
-def update_sampling_config():
-    """Atualiza a configuração do amostrador adaptativo"""
-    try:
-        if not request.is_json:
-            return jsonify({
-                "status": "error",
-                "message": "Content-Type deve ser application/json"
-            }), 400
-            
-        config = request.get_json()
-        
-        # Atualizar parâmetros
-        if 'high_activity_threshold' in config:
-            adaptive_sampler.HIGH_ACTIVITY_THRESHOLD = float(config['high_activity_threshold'])
-            
-        if 'low_activity_threshold' in config:
-            adaptive_sampler.LOW_ACTIVITY_THRESHOLD = float(config['low_activity_threshold'])
-            
-        if 'high_activity_interval_ms' in config:
-            adaptive_sampler.HIGH_ACTIVITY_INTERVAL = int(config['high_activity_interval_ms'])
-            
-        if 'medium_activity_interval_ms' in config:
-            adaptive_sampler.MEDIUM_ACTIVITY_INTERVAL = int(config['medium_activity_interval_ms'])
-            
-        if 'low_activity_interval_ms' in config:
-            adaptive_sampler.LOW_ACTIVITY_INTERVAL = int(config['low_activity_interval_ms'])
-            
-        if 'idle_interval_ms' in config:
-            adaptive_sampler.IDLE_INTERVAL = int(config['idle_interval_ms'])
-            
-        if 'max_idle_count' in config:
-            adaptive_sampler.max_idle_count = int(config['max_idle_count'])
-        
-        # Resetar o estado do amostrador ao aplicar novas configurações
-        adaptive_sampler.reset()
-        
-        logger.info(f"Configuração de amostragem atualizada: {config}")
-        
-        return jsonify({
-            "status": "success",
-            "message": "Configuração atualizada com sucesso",
-            "config": {
-                "high_activity_threshold": adaptive_sampler.HIGH_ACTIVITY_THRESHOLD,
-                "low_activity_threshold": adaptive_sampler.LOW_ACTIVITY_THRESHOLD,
-                "high_activity_interval_ms": adaptive_sampler.HIGH_ACTIVITY_INTERVAL,
-                "medium_activity_interval_ms": adaptive_sampler.MEDIUM_ACTIVITY_INTERVAL,
-                "low_activity_interval_ms": adaptive_sampler.LOW_ACTIVITY_INTERVAL,
-                "idle_interval_ms": adaptive_sampler.IDLE_INTERVAL,
-                "max_idle_count": adaptive_sampler.max_idle_count,
-                "current_sampling_interval_ms": adaptive_sampler.current_sampling_interval
-            }
-        })
-    except Exception as e:
-        logger.error(f"Erro ao atualizar configuração de amostragem: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({
-            "status": "error",
-            "message": f"Erro interno: {str(e)}"
-        }), 500
-
-# Instância global do gerenciador de zonas
-zone_manager = ZoneManager()
+    finally:
+        radar_manager.stop()
+        logger.info("✅ Sistema encerrado!")
 
 if __name__ == "__main__":
-    port = 3000  # Porta fixa em 3000
-    host = "0.0.0.0"
-    
-    print("\n" + "="*50)
-    print("🚀 Servidor Radar iniciando...")
-    print(f"📡 Endpoint dados: http://{host}:{port}/radar/data")
-    print(f"ℹ️  Endpoint status: http://{host}:{port}/radar/status")
-    print(f"👥 Endpoint sessões: http://{host}:{port}/radar/sessions")
-    print(f"👤 Endpoint sessão específica: http://{host}:{port}/radar/sessions/<session_id>")
-    print(f"⚙️  Endpoint configuração amostragem: http://{host}:{port}/radar/sampling/config")
-    print(f"🛒 Endpoint seções da gôndola: http://{host}:{port}/shelf/sections")
-    print(f"📍 Endpoint zonas: http://{host}:{port}/zones")
-    print(f"📍 Endpoint áreas: http://{host}:{port}/areas")
-    print("⚡ Use Ctrl+C para encerrar")
-    print("="*50 + "\n")
-    
-    # Informações sobre a amostragem adaptativa
-    print("📊 Sistema de Amostragem Adaptativa Ativado")
-    print(f"   - Atividade alta (> {adaptive_sampler.HIGH_ACTIVITY_THRESHOLD} cm/s): {adaptive_sampler.HIGH_ACTIVITY_INTERVAL} ms")
-    print(f"   - Atividade média: {adaptive_sampler.MEDIUM_ACTIVITY_INTERVAL} ms")
-    print(f"   - Atividade baixa (< {adaptive_sampler.LOW_ACTIVITY_THRESHOLD} cm/s): {adaptive_sampler.LOW_ACTIVITY_INTERVAL} ms")
-    print(f"   - Inatividade prolongada: {adaptive_sampler.IDLE_INTERVAL} ms")
-    print("="*50 + "\n")
-    
-    app.run(host=host, port=port, debug=True) 
+    main() 
